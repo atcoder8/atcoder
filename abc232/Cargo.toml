@@ -1,0 +1,51 @@
+[package]
+name = "abc232"
+version = "0.1.0"
+edition = "2018"
+
+[package.metadata.cargo-compete.bin]
+abc232-a = { alias = "a", problem = "https://atcoder.jp/contests/abc232/tasks/abc232_a" }
+abc232-b = { alias = "b", problem = "https://atcoder.jp/contests/abc232/tasks/abc232_b" }
+abc232-c = { alias = "c", problem = "https://atcoder.jp/contests/abc232/tasks/abc232_c" }
+abc232-d = { alias = "d", problem = "https://atcoder.jp/contests/abc232/tasks/abc232_d" }
+abc232-e = { alias = "e", problem = "https://atcoder.jp/contests/abc232/tasks/abc232_e" }
+abc232-f = { alias = "f", problem = "https://atcoder.jp/contests/abc232/tasks/abc232_f" }
+abc232-g = { alias = "g", problem = "https://atcoder.jp/contests/abc232/tasks/abc232_g" }
+abc232-h = { alias = "h", problem = "https://atcoder.jp/contests/abc232/tasks/abc232_h" }
+
+[[bin]]
+name = "abc232-a"
+path = "src/bin/a.rs"
+
+[[bin]]
+name = "abc232-b"
+path = "src/bin/b.rs"
+
+[[bin]]
+name = "abc232-c"
+path = "src/bin/c.rs"
+
+[[bin]]
+name = "abc232-d"
+path = "src/bin/d.rs"
+
+[[bin]]
+name = "abc232-e"
+path = "src/bin/e.rs"
+
+[[bin]]
+name = "abc232-f"
+path = "src/bin/f.rs"
+
+[[bin]]
+name = "abc232-g"
+path = "src/bin/g.rs"
+
+[[bin]]
+name = "abc232-h"
+path = "src/bin/h.rs"
+
+[dependencies]
+proconio = { version = "=0.3.6", features = ["derive"] }
+
+[dev-dependencies]
