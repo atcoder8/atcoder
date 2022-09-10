@@ -6,6 +6,5 @@ fn main() {
         t: String,
     }
 
-    let flag = s.len() <= t.len() && s[..] == t[..s.len()];
-    println!("{}", if flag { "Yes" } else { "No" });
+    println!("{}", if t.starts_with(&s) { "Yes" } else { "No" });
 }
