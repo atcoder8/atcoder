@@ -16,52 +16,38 @@ fn solve() -> bool {
         s: Chars,
     }
 
-    if !s.contains(&'1') {
-        let mut blank_cnt = 0_usize;
-        let mut flag = false;
+    let all_one_cnt = s.iter().filter(|&&c| c == '1').count();
 
-        for &c in &s {
-            if c == '?' {
-                blank_cnt += 1;
+    let mut zero_cnt = 0;
+    let mut one_cnt = 0;
 
-                if blank_cnt == k {
-                    if flag {
-                        return false;
-                    }
-
-                    flag = true;
-                } else if blank_cnt > k {
-                    return false;
-                }
-            } else {
-                blank_cnt = 0;
-            }
+    for &c in s.iter().take(k) {
+        if c == '0' {
+            zero_cnt += 1;
+        } else if c == '1' {
+            one_cnt += 1;
         }
-
-        return flag;
     }
 
-    let left = s.iter().position(|&c| c == '1').unwrap();
-    let right = n - s.iter().rev().position(|&c| c == '1').unwrap();
+    if one_cnt == all_one_cnt && zero_cnt == 0 {}
 
-    if right - left > k {
-        return false;
-    }
+    (one_cnt == all_one_cnt && zero_cnt == 0) as usize
+        + (k..n)
+            .filter(|&i| {
+                if s[i - k] == '0' {
+                    zero_cnt -= 1;
+                } else if s[i - k] == '1' {
+                    one_cnt -= 1;
+                }
 
-    if s[left..right].iter().any(|&c| c == '0') {
-        return false;
-    }
+                if s[i] == '0' {
+                    zero_cnt += 1;
+                } else if s[i] == '1' {
+                    one_cnt += 1;
+                }
 
-    let rem = k - (right - left);
-
-    if rem == 0 {
-        return true;
-    }
-
-    let left_blank_cnt = s[..left].iter().rev().take_while(|&&c| c == '?').count();
-    let right_blank_cnt = s[right..].iter().take_while(|&&c| c == '?').count();
-
-    left_blank_cnt + right_blank_cnt == rem
-        || (left_blank_cnt == 0 && right_blank_cnt >= rem)
-        || (left_blank_cnt >= rem && right_blank_cnt == 0)
+                one_cnt == all_one_cnt && zero_cnt == 0
+            })
+            .count()
+        == 1
 }
