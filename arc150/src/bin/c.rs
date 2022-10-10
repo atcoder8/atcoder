@@ -26,7 +26,9 @@ fn solve() -> bool {
     let mut deq = VecDeque::from(vec![(0, init_b_idx)]);
     let mut visited = vec![false; n];
 
-    while let Some((cur_node, cur_b_progress)) = deq.pop_front() {
+    loop {
+        let (cur_node, cur_b_progress) = deq.pop_front().unwrap();
+
         if visited[cur_node] {
             continue;
         }
@@ -34,11 +36,7 @@ fn solve() -> bool {
         visited[cur_node] = true;
 
         if cur_node == n - 1 {
-            if cur_b_progress != k {
-                return false;
-            }
-
-            continue;
+            return cur_b_progress == k;
         }
 
         for &next_node in &graph[cur_node] {
@@ -51,6 +49,4 @@ fn solve() -> bool {
             }
         }
     }
-
-    true
 }
