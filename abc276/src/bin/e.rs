@@ -1,3 +1,5 @@
+use std::collections::VecDeque;
+
 use itertools::Itertools;
 use petgraph::unionfind::UnionFind;
 use proconio::{input, marker::Chars};
@@ -10,14 +12,7 @@ fn main() {
         ccc: [Chars; h],
     }
 
-    println!(
-        "{}",
-        if solve_by_union_find(&ccc) {
-            "Yes"
-        } else {
-            "No"
-        }
-    );
+    println!("{}", if solve_by_bfs(&ccc) { "Yes" } else { "No" });
 }
 
 fn find_start_coord(ccc: &Vec<Vec<char>>) -> Option<(usize, usize)> {
@@ -34,25 +29,26 @@ fn find_start_coord(ccc: &Vec<Vec<char>>) -> Option<(usize, usize)> {
     None
 }
 
+#[allow(unused)]
 fn solve_by_union_find(ccc: &Vec<Vec<char>>) -> bool {
     let (h, w) = (ccc.len(), ccc[0].len());
 
-    let coord_to_idx = |(i, j)| i * w + j;
+    let coord_to_idx = |(row, col)| row * w + col;
 
     let mut uf: UnionFind<usize> = UnionFind::new(h * w);
 
-    for i in 0..h {
-        for j in 0..w {
-            if ccc[i][j] != '.' {
+    for row in 0..h {
+        for col in 0..w {
+            if ccc[row][col] != '.' {
                 continue;
             }
 
-            if i < h - 1 && ccc[i + 1][j] == '.' {
-                uf.union(coord_to_idx((i, j)), coord_to_idx((i + 1, j)));
+            if row < h - 1 && ccc[row + 1][col] == '.' {
+                uf.union(coord_to_idx((row, col)), coord_to_idx((row + 1, col)));
             }
 
-            if j < w - 1 && ccc[i][j + 1] == '.' {
-                uf.union(coord_to_idx((i, j)), coord_to_idx((i, j + 1)));
+            if col < w - 1 && ccc[row][col + 1] == '.' {
+                uf.union(coord_to_idx((row, col)), coord_to_idx((row, col + 1)));
             }
         }
     }
@@ -87,4 +83,55 @@ fn solve_by_union_find(ccc: &Vec<Vec<char>>) -> bool {
     }
 
     false
+}
+
+fn solve_by_bfs(ccc: &Vec<Vec<char>>) -> bool {
+    let (h, w) = (ccc.len(), ccc[0].len());
+
+    let coord_to_idx = |(row, col)| row * w + col;
+
+    let mut que = VecDeque::new();
+    let mut visited = vec![0; h * w];
+
+    let (start_row, start_col) = find_start_coord(ccc).unwrap();
+
+    for (i, &(diff_row, diff_col)) in DIFFS.iter().enumerate() {
+        let (next_row, next_col) = (
+            start_row.wrapping_add(diff_row),
+            start_col.wrapping_add(diff_col),
+        );
+
+        if next_row >= h || next_col >= w || ccc[next_row][next_col] != '.' {
+            continue;
+        }
+
+        que.push_back((next_row, next_col));
+        visited[coord_to_idx((next_row, next_col))] = i + 1;
+    }
+
+    while let Some((cur_row, cur_col)) = que.pop_front() {
+        let cur_cell_idx = coord_to_idx((cur_row, cur_col));
+
+        for &(diff_row, diff_col) in &DIFFS {
+            let (next_row, next_col) = (
+                cur_row.wrapping_add(diff_row),
+                cur_col.wrapping_add(diff_col),
+            );
+
+            if next_row >= h || next_col >= w || ccc[next_row][next_col] != '.' {
+                continue;
+            }
+
+            let next_cell_idx = coord_to_idx((next_row, next_col));
+
+            if visited[next_cell_idx] == 0 {
+                visited[next_cell_idx] = visited[cur_cell_idx];
+                que.push_back((next_row, next_col));
+            } else if visited[next_cell_idx] != visited[cur_cell_idx] {
+                return true;
+            }
+        }
+    }
+
+    return false;
 }
