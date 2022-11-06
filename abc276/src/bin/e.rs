@@ -12,7 +12,14 @@ fn main() {
         ccc: [Chars; h],
     }
 
-    println!("{}", if solve_by_bfs(&ccc) { "Yes" } else { "No" });
+    println!(
+        "{}",
+        if solve_by_union_find(&ccc) {
+            "Yes"
+        } else {
+            "No"
+        }
+    );
 }
 
 fn find_start_coord(ccc: &Vec<Vec<char>>) -> Option<(usize, usize)> {
@@ -71,7 +78,7 @@ fn solve_by_union_find(ccc: &Vec<Vec<char>>) -> bool {
         })
         .collect_vec();
 
-    for i in 0..(coords_to_check.len() + 1) {
+    for i in 0..(coords_to_check.len() - 1) {
         for j in (i + 1)..coords_to_check.len() {
             if uf.equiv(
                 coord_to_idx(coords_to_check[i]),
@@ -85,6 +92,7 @@ fn solve_by_union_find(ccc: &Vec<Vec<char>>) -> bool {
     false
 }
 
+#[allow(unused)]
 fn solve_by_bfs(ccc: &Vec<Vec<char>>) -> bool {
     let (h, w) = (ccc.len(), ccc[0].len());
 
