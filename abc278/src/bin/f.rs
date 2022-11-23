@@ -1,5 +1,4 @@
-// unfinished
-
+use im_rc::HashMap;
 use proconio::{input, marker::Chars};
 
 fn main() {
@@ -12,47 +11,24 @@ fn solve() -> bool {
         ss: [Chars; n],
     }
 
-    let mut dp = vec![vec![false; n]; 1 << n];
+    let mut memo: HashMap<usize, bool> = HashMap::new();
 
-    for bit in 0..(1 << n) {
-        for from in 0..n {
-            if bit != 0 && !dp[bit][from] {
-                continue;
-            }
+    (0..ss.len()).any(|i| !rec(&mut memo, &ss, *ss[i].last().unwrap(), 1 << i))
+}
 
-            for to in 0..n {
-                if (bit >> to) & 1 == 1 {
-                    continue;
-                }
-
-                if bit == 0 || *ss[from].last().unwrap() == *ss[to].first().unwrap() {
-                    dp[bit | (1 << to)][to] = true;
-                }
-            }
-        }
+pub fn rec(
+    memo: &mut HashMap<usize, bool>,
+    ss: &Vec<Vec<char>>,
+    prev_c: char,
+    used: usize,
+) -> bool {
+    if let Some(&ret) = memo.get(&used) {
+        ret
+    } else {
+        let ret = (0..ss.len())
+            .filter(|&i| (used >> i) & 1 == 0 && *ss[i].first().unwrap() == prev_c)
+            .any(|i| !rec(memo, ss, *ss[i].last().unwrap(), used | (1 << i)));
+        memo.insert(used, ret);
+        ret
     }
-
-    let cloned_dp = dp.clone();
-
-    for bit in (1_usize..(1 << n)).rev() {
-        let ones = bit.count_ones() as usize;
-
-        if ones % 2 == 0 {
-            for from in 0..n {
-                dp[bit][from] &= (0..n)
-                    .filter(|&to| cloned_dp[bit | (1 << to)][to])
-                    .any(|to| dp[bit | (1 << to)][to]);
-            }
-        } else {
-            for from in 0..n {
-                dp[bit][from] &= (0..n)
-                    .filter(|&to| cloned_dp[bit | (1 << to)][to])
-                    .all(|to| dp[bit | (1 << to)][to]);
-            }
-        }
-    }
-
-    (0..n)
-        .filter(|&to| cloned_dp[1 << to][to])
-        .any(|to| dp[1 << to][to])
 }
