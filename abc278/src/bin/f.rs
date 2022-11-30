@@ -1,4 +1,5 @@
-use im_rc::HashMap;
+use std::collections::HashMap;
+
 use proconio::{input, marker::Chars};
 
 fn main() {
