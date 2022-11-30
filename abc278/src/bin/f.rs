@@ -2,18 +2,13 @@ use im_rc::HashMap;
 use proconio::{input, marker::Chars};
 
 fn main() {
-    println!("{}", if solve() { "First" } else { "Second" });
-}
-
-fn solve() -> bool {
     input! {
         n: usize,
         ss: [Chars; n],
     }
 
-    let mut memo: HashMap<usize, bool> = HashMap::new();
-
-    (0..ss.len()).any(|i| !rec(&mut memo, &ss, *ss[i].last().unwrap(), 1 << i))
+    let ans = (0..ss.len()).any(|i| !rec(&mut HashMap::new(), &ss, *ss[i].last().unwrap(), 1 << i));
+    println!("{}", if ans { "First" } else { "Second" });
 }
 
 pub fn rec(
