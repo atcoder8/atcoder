@@ -8,7 +8,7 @@ fn main() {
         (n, p): (usize, usize)
     }
 
-    let critical_prob = Mint::new(p) / Mint::new(100);
+    let critical_prob = Mint::frac(p, 100);
     let normal_prob = Mint::new(1) - critical_prob;
 
     let mut dp = vec![Mint::new(0); n + 1];
@@ -323,6 +323,10 @@ pub mod atcoder8_library {
                         Self {
                             val: val.rem_euclid_u32($modulus),
                         }
+                    }
+
+                    pub fn frac<T: RemEuclidU32>(numer: T, denom: T) -> Self {
+                        Self::new(numer) / Self::new(denom)
                     }
 
                     pub fn raw(val: u32) -> Self {
