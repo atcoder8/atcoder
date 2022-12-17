@@ -1,6 +1,6 @@
 #!/bin/bash
 
-if [ $# != 1 ]; then
+if [ $# -ne 1 ]; then
   echo "Usage: ./new <CONTEST NAME>"
   exit 1
 fi
