@@ -1,3 +1,4 @@
+use itertools::Itertools;
 use proconio::input;
 
 fn main() {
@@ -19,39 +20,21 @@ fn main() {
 }
 
 fn solve(xx: Vec<usize>) -> Option<usize> {
-    let mut xx = xx;
-    xx.sort_unstable();
-    let min_x = *xx.iter().min().unwrap();
-    xx.iter_mut().for_each(|x| *x -= min_x);
     let sum_x: usize = xx.iter().sum();
 
-    if xx[0] % 2 != xx[1] % 2 || xx[0] % 2 != xx[2] % 2 || sum_x % 6 != 0 {
+    if !xx.iter().map(|&x| x % 2).all_equal() || sum_x % 3 != 0 {
         return None;
     }
 
-    let mut ans = 0;
+    let a = sum_x / 3;
 
-    while xx[1] > xx[0] + 2 {
-        let add_num = (xx[1] - xx[0]) / 4;
+    Some(xx.iter().map(|&x| diff_abs(x, a)).sum::<usize>() / 4)
+}
 
-        xx[0] += 4 * add_num;
-
-        let other_add = 2 * add_num;
-
-        if xx[2] - xx[1] >= other_add {
-            xx[1] += other_add;
-        } else {
-            let rem = other_add - (xx[2] - xx[1]);
-            let half = rem / 4 * 2;
-
-            xx[1] = xx[2] + half;
-            xx[2] += rem - half;
-        }
-
-        ans += add_num;
+fn diff_abs(a: usize, b: usize) -> usize {
+    if a >= b {
+        a - b
+    } else {
+        b - a
     }
-
-    ans += (2 * xx[2] - (xx[0] + xx[1])) / 6;
-
-    return Some(ans);
 }
