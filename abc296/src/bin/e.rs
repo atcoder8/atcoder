@@ -24,6 +24,8 @@ fn main() {
         doubling.push(next);
     }
 
-    let ans = (0..n).filter(|&i| !doubling.last().unwrap()[i].is_empty()).count();
+    let ans = (0..n)
+        .filter(|&i| !doubling.last().unwrap()[i].is_empty())
+        .count();
     println!("{}", ans);
 }
