@@ -10,20 +10,21 @@ fn main() {
 fn solve() -> usize {
     input! {
         (n, k): (usize, usize),
-        mut aa: [usize; n],
+        aa: [usize; n],
     }
-
-    aa.sort_unstable();
 
     let mut heap: BinaryHeap<Reverse<usize>> = BinaryHeap::new();
     heap.push(Reverse(0));
-
     let mut used: HashSet<usize> = HashSet::new();
-    used.insert(0);
-
     let mut cnt = 0;
 
-    while let Some(Reverse(cur)) = heap.pop() {
+    loop {
+        let Reverse(cur) = heap.pop().unwrap();
+
+        if used.contains(&cur) {
+            continue;
+        }
+
         used.insert(cur);
 
         cnt += 1;
@@ -36,11 +37,8 @@ fn solve() -> usize {
             let next = cur + a;
 
             if !used.contains(&next) {
-                used.insert(next);
                 heap.push(Reverse(next));
             }
         }
     }
-
-    unreachable!()
 }
