@@ -19,5 +19,4 @@ sed -i "s/^\]$/  \"$CONTEST_NAME\",\n\]/" "$CONTEST_DIR_PREFIX/Cargo.toml"
 # Create a package for the contest.
 cargo compete new $CONTEST_NAME --open
 
-# # Open the directory for the contest in Visual Studio Code.
-# code $CONTEST_NAME
+code $CONTEST_NAME/src/bin/*.rs
