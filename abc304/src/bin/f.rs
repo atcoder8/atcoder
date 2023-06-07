@@ -1,9 +1,5 @@
-// unfinished
-
 use modint::Modint998244353;
 use proconio::{input, marker::Chars};
-
-use crate::modint::Pow;
 
 type Mint = Modint998244353;
 
@@ -13,54 +9,34 @@ fn main() {
         s: Chars,
     }
 
-    let divisors = find_divisors(n);
-    let mut reduced_divisors: Vec<usize> = vec![];
-    for &divisor in divisors.iter().rev().skip(1) {
-        if reduced_divisors.iter().all(|&d| d % divisor != 0) {
-            reduced_divisors.push(divisor);
-        }
+    let mut pow2 = vec![Mint::new(1)];
+    for i in 0..n {
+        pow2.push(pow2[i] * 2);
     }
 
-    let mut ans = Mint::new(0);
+    let mut m = vec![Mint::new(0); n];
+    for t in 1..n {
+        if n % t != 0 {
+            continue;
+        }
 
-    for &divisor in &reduced_divisors {
-        let mut flags = vec![true; divisor];
+        let mut free_flags = vec![true; t];
         for i in 0..n {
-            if s[i] == '.' {
-                flags[i % divisor] = false;
+            free_flags[i % t] &= s[i] == '#';
+        }
+        let free_num = free_flags.iter().filter(|&&x| x).count();
+        m[t] = pow2[free_num];
+
+        for s in 1..t {
+            if t % s == 0 {
+                let minus = m[s];
+                m[t] -= minus;
             }
         }
-
-        let pop_num = flags.iter().filter(|&&x| x).count();
-        ans += Mint::new(2).pow(pop_num);
-    }
-    ans -= reduced_divisors.len() - 1;
-    if s.iter().all(|&c| c == '#') {
-        ans -= reduced_divisors.len() - 1;
     }
 
+    let ans = m.iter().fold(Mint::new(0), |sum, x| sum + *x);
     println!("{}", ans.val());
-}
-
-/// Creates a sequence consisting of the divisors of `n`.
-pub fn find_divisors(n: usize) -> Vec<usize> {
-    assert_ne!(n, 0, "`n` must be at least 1.");
-
-    let mut divisors = vec![];
-
-    for i in (1..).take_while(|i| i * i <= n) {
-        if n % i == 0 {
-            divisors.push(i);
-
-            if n / i != i {
-                divisors.push(n / i);
-            }
-        }
-    }
-
-    divisors.sort_unstable();
-
-    divisors
 }
 
 pub mod modint {
