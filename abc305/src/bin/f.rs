@@ -56,8 +56,8 @@ fn dfs(adj_list: &mut Vec<Vec<bool>>, visited: &mut Vec<bool>, cur: usize) {
         dfs(adj_list, visited, next);
 
         println!("{}", cur + 1);
+        std::io::stdout().flush().unwrap();
 
         read_adjacent_nodes();
-        std::io::stdout().flush().unwrap();
     }
 }
