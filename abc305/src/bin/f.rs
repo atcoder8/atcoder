@@ -13,9 +13,40 @@ fn main() {
 
     let mut adj_list = vec![vec![false; n]; n];
     let mut visited = vec![false; n];
-    visited[0] = true;
+    let mut stack = vec![(0, false)];
+    while let Some((cur, back)) = stack.pop() {
+        if (cur, back) != (0, false) {
+            println!("{}", cur + 1);
+            std::io::stdout().flush().unwrap();
+        }
 
-    dfs(&mut adj_list, &mut visited, 0);
+        let adj_nodes = read_adjacent_nodes();
+
+        if back {
+            continue;
+        }
+
+        if visited[cur] {
+            stack.pop();
+
+            continue;
+        }
+
+        visited[cur] = true;
+
+        for &node in &adj_nodes {
+            adj_list[cur][node] = true;
+        }
+
+        for next in 0..n {
+            if !adj_list[cur][next] || visited[next] {
+                continue;
+            }
+
+            stack.push((cur, true));
+            stack.push((next, false));
+        }
+    }
 }
 
 fn read_adjacent_nodes() -> Vec<usize> {
@@ -34,30 +65,4 @@ fn read_adjacent_nodes() -> Vec<usize> {
     split_line
         .map(|x| x.parse::<usize>().unwrap() - 1)
         .collect()
-}
-
-fn dfs(adj_list: &mut Vec<Vec<bool>>, visited: &mut Vec<bool>, cur: usize) {
-    let adj_nodes = read_adjacent_nodes();
-
-    for &node in &adj_nodes {
-        adj_list[cur][node] = true;
-    }
-
-    for next in 0..adj_list.len() {
-        if !adj_list[cur][next] || visited[next] {
-            continue;
-        }
-
-        visited[next] = true;
-
-        println!("{}", next + 1);
-        std::io::stdout().flush().unwrap();
-
-        dfs(adj_list, visited, next);
-
-        println!("{}", cur + 1);
-        std::io::stdout().flush().unwrap();
-
-        read_adjacent_nodes();
-    }
 }
