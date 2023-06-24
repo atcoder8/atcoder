@@ -30,7 +30,7 @@ num-rational = "=0.2.4"
 num-traits = "=0.2.11"
 num-derive = "=0.3.0"
 ndarray = "=0.13.0"
-nalgebra = "=0.20.0"
+# nalgebra = "=0.20.0"
 alga = "=0.9.3"
 libm = "=0.2.1"
 rand = { version = "=0.7.3", features = ["small_rng"] }
@@ -59,6 +59,6 @@ proconio = { version = "=0.3.6", features = ["derive"] }
 text_io = "=0.1.8"
 whiteread = "=0.5.0"
 rustc-hash = "=1.1.0"
-smallvec = "=1.2.0"
+# smallvec = "=1.2.0"
 
 [dev-dependencies]
