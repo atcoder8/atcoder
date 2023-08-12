@@ -155,8 +155,8 @@ Wrong Answer on Test #{}
     pub fn generator() -> Input {
         let mut rng = rand::thread_rng();
 
-        let n = rng.gen_range(1, 10);
-        let k = rng.gen_range(0, n + 1);
+        let n = rng.gen_range(1..10);
+        let k = rng.gen_range(0..n + 1);
 
         let s = (0..n)
             .map(|_| if rng.gen_bool(0.5) { 'X' } else { 'Y' })

@@ -23,7 +23,7 @@ fn main() {
     let mut hor_sums = vec![0; unzip_rows.len()];
     let mut ver_sums = vec![0; unzip_cols.len()];
 
-    for &((r, c), x) in &zip_rcx_map {
+    for (&(r, c), &x) in &zip_rcx_map {
         hor_sums[r] += x;
         ver_sums[c] += x;
     }

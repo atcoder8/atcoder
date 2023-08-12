@@ -132,8 +132,8 @@ Wrong Answer on Test #{}
     pub fn generator() -> Input {
         let mut rng = rand::thread_rng();
 
-        let n = rng.gen_range(1, 11);
-        let k = rng.gen_range(0, n);
+        let n = rng.gen_range(1..11);
+        let k = rng.gen_range(0..n);
 
         let mut pp: Vec<usize> = (0..n).collect();
         pp.shuffle(&mut rng);

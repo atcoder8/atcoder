@@ -36,7 +36,7 @@ fn main() {
         let diff = unique_aa[i] - unique_aa[i - 1];
         let unit = 1_usize << diff;
 
-        for &(cnt, comb_num) in &dp {
+        for (&cnt, &comb_num) in &dp {
             for add_cnt in 0..=(cnt / unit) {
                 let rem = cnt - unit * add_cnt;
                 *next_dp.entry(counts[unique_aa[i]] + add_cnt).or_default() +=

@@ -88,8 +88,8 @@ Wrong Answer on Test #{}
     pub fn generator() -> Input {
         let mut rng = rand::thread_rng();
 
-        let n = rng.gen_range(3_usize, 10);
-        let bit = rng.gen_range(0, 1_usize << n);
+        let n = rng.gen_range(3_usize..10);
+        let bit = rng.gen_range(0..(1_usize << n));
         let s = (0..n)
             .map(|i| (b'0' + ((bit >> i) & 1) as u8) as char)
             .collect_vec();

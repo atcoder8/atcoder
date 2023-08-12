@@ -53,9 +53,9 @@ Wrong Answer on Test #{}
     pub fn generator() -> Input {
         let mut rng = rand::thread_rng();
 
-        let n = rng.gen_range(1, 5);
+        let n = rng.gen_range(1..5);
 
-        (0..n).map(|_| rng.gen_range(1, n + 1)).collect()
+        (0..n).map(|_| rng.gen_range(1..n + 1)).collect()
     }
 
     /// Return the expected answer.
