@@ -14,7 +14,7 @@ cd $CONTEST_DIR_PREFIX
 readonly CONTEST_NAME=$1
 
 # Add a package for the contest to the workspace.
-sed -i "s/^\]$/  \"$CONTEST_NAME\",\n\]/" "$CONTEST_DIR_PREFIX/Cargo.toml"
+# sed -i "s/^\]$/  \"$CONTEST_NAME\",\n\]/" "$CONTEST_DIR_PREFIX/Cargo.toml"
 
 # Create a package for the contest.
 cargo compete new $CONTEST_NAME --open
