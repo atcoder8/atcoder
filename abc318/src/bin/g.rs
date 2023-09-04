@@ -1,73 +1,28 @@
-// unfinished
-
-use std::collections::VecDeque;
-
+use ac_library::MfGraph;
 use proconio::{input, marker::Usize1};
 
 fn main() {
-    println!("{}", if solve() { "Yes" } else { "No" });
-}
-
-fn solve() -> bool {
     input! {
         (n, m): (usize, usize),
         (a, b, c): (Usize1, Usize1, Usize1),
         uv: [(Usize1, Usize1); m],
     }
 
-    let mut graph = vec![vec![]; n];
+    let mut flow = MfGraph::<usize>::new(2 * n + 2);
+    for i in 0..n {
+        flow.add_edge(i, n + i, 1);
+    }
     for &(u, v) in &uv {
-        graph[u].push(v);
-        graph[v].push(u);
+        flow.add_edge(n + u, v, 1);
+        flow.add_edge(n + v, u, 1);
     }
 
-    {
-        // A -> B (without C)
-        let mut queue = VecDeque::from(vec![a]);
-        let mut visited = vec![false; n];
-        visited[a] = true;
-        while let Some(cur) = queue.pop_front() {
-            for &next in &graph[cur] {
-                if !visited[next] && next != c {
-                    visited[next] = true;
-                    queue.push_back(next);
-                }
-            }
-        }
-        if !visited[b] {
-            return false;
-        }
-    }
+    let s = 2 * n;
+    let t = 2 * n + 1;
+    flow.add_edge(s, n + b, 2);
+    flow.add_edge(n + a, t, 1);
+    flow.add_edge(n + c, t, 1);
 
-    {
-        // B -> C (without A)
-        let mut queue = VecDeque::from(vec![b]);
-        let mut visited = vec![false; n];
-        visited[b] = true;
-        while let Some(cur) = queue.pop_front() {
-            for &next in &graph[cur] {
-                if !visited[next] && next != a {
-                    visited[next] = true;
-                    queue.push_back(next);
-                }
-            }
-        }
-        if !visited[c] {
-            return false;
-        }
-    }
-
-    let mut queue = VecDeque::from(vec![a]);
-    let mut visited = vec![false; n];
-    visited[a] = true;
-    while let Some(cur) = queue.pop_front() {
-        for &next in &graph[cur] {
-            if !visited[next] {
-                visited[next] = true;
-                queue.push_back(next);
-            }
-        }
-    }
-
-    visited[c]
+    let ans = flow.flow(s, t) == 2;
+    println!("{}", if ans { "Yes" } else { "No" });
 }
