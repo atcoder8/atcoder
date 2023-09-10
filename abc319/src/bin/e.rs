@@ -1,5 +1,7 @@
 use proconio::input;
 
+const LCM: usize = 840;
+
 fn main() {
     input! {
         (n, x, y): (usize, usize, usize),
@@ -8,15 +10,12 @@ fn main() {
         qq: [usize; query_num],
     }
 
-    let mut req_times = vec![0; 840];
-    for start in 0..840 {
+    let mut req_times = vec![0; LCM];
+    for start in 0..LCM {
         let mut time = start;
         time += x;
         for &(p, t) in &pt {
-            if time % p != 0 {
-                time += p - (time % p);
-            }
-            time += t;
+            time = (time + p - 1) / p * p + t;
         }
         time += y;
 
@@ -24,6 +23,6 @@ fn main() {
     }
 
     for &q in &qq {
-        println!("{}", q + req_times[q % 840]);
+        println!("{}", q + req_times[q % LCM]);
     }
 }
