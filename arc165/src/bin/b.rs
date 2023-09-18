@@ -1,8 +1,5 @@
-// unfinished
-
 use itertools::join;
 use proconio::input;
-use superslice::Ext;
 
 fn main() {
     input! {
@@ -10,30 +7,47 @@ fn main() {
         mut pp: [usize; n],
     }
 
-    let mut left = 0;
-    let mut right = 0;
-    let mut max_right = None;
-    let mut max_right_left = None;
-    for (i, &p) in pp.iter().enumerate() {
-        right = left + pp[left..right].upper_bound(&p);
+    let ans = solve((k, pp));
+    println!("{}", join(ans, " "));
+}
 
-        if right == left {
-            left = i;
-            right = i + 1;
-        }
+fn solve(input: (usize, Vec<usize>)) -> Vec<usize> {
+    let (k, mut pp) = input;
+    let n = pp.len();
 
-        if i - left + 1 == k && (max_right.is_none() || right > max_right.unwrap()) {
-            max_right = Some(right);
-            max_right_left = Some(left);
-
-            left += 1;
+    let mut max_inc_len = 1;
+    let mut inc_len = 1;
+    for window in pp.windows(2) {
+        if window[0] < window[1] {
+            inc_len += 1;
+            max_inc_len = max_inc_len.max(inc_len);
+        } else {
+            inc_len = 1;
         }
     }
 
-    let left = max_right_left.unwrap_or(n - k);
-    pp[left..(left + k)].sort_unstable();
+    if max_inc_len >= k {
+        return pp;
+    }
 
-    println!("{}", join(pp, " "));
+    let mut acc_min = vec![0; k];
+    acc_min[0] = pp[n - k];
+    for i in 1..k {
+        acc_min[i] = acc_min[i - 1].min(pp[n - k + i]);
+    }
+
+    let left = (((n - k).saturating_sub(k - 1))..(n - k))
+        .rev()
+        .take_while(|&i| pp[i] < pp[i + 1])
+        .filter(|&i| pp[n - k - 1] < acc_min[i + k - 1 - (n - k)])
+        .min();
+
+    match left {
+        Some(left) => pp[left..(left + k)].sort_unstable(),
+        None => pp[(n - k)..].sort_unstable(),
+    }
+
+    pp
 }
 
 /// Module for testing
@@ -41,7 +55,6 @@ fn main() {
 mod random_test {
     use itertools::Itertools;
     use rand::{seq::SliceRandom, Rng};
-    use superslice::Ext;
 
     /// Input data type.
     type Input = (usize, Vec<usize>);
@@ -82,7 +95,7 @@ Wrong Answer on Test #{}
     pub fn generator() -> Input {
         let mut rng = rand::thread_rng();
 
-        let n = rng.gen_range(1..=5);
+        let n = rng.gen_range(1..=100);
         let k = rng.gen_range(1..=n);
         let mut pp = (1..=n).collect_vec();
         pp.shuffle(&mut rng);
@@ -108,37 +121,6 @@ Wrong Answer on Test #{}
 
     /// Test this program.
     pub fn solve(input: Input) -> Output {
-        let (k, mut pp) = input;
-
-        let n = pp.len();
-        let mut left = 0;
-        let mut right = 0;
-        let mut max_right = None;
-        let mut max_right_left = None;
-        for (i, &p) in pp.iter().enumerate() {
-            let right_pos = left + pp[left..right].upper_bound(&p);
-            if right_pos == i + 1 {
-                right = right_pos;
-            } else {
-                right = right_pos.min(right);
-            }
-
-            if right == left {
-                left = i;
-                right = i + 1;
-            }
-
-            if i - left + 1 == k && (max_right.is_none() || right > max_right.unwrap()) {
-                max_right = Some(right);
-                max_right_left = Some(left);
-
-                left += 1;
-            }
-        }
-
-        let left = max_right_left.unwrap_or(n - k);
-        pp[left..(left + k)].sort_unstable();
-
-        pp
+        super::solve(input)
     }
 }
