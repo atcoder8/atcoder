@@ -1,31 +1,20 @@
-use std::collections::VecDeque;
-
-use proconio::input;
+use itertools::Itertools;
+use proconio::{input, marker::Usize1};
 
 fn main() {
     input! {
-        k: usize,
+        k: Usize1,
     }
 
-    let mut queue: VecDeque<usize> = VecDeque::new();
-    for i in 1..10 {
-        queue.push_back(i);
-    }
-
-    let mut cnt = 0;
-    let ans = loop {
-        let cur = queue.pop_front().unwrap();
-        cnt += 1;
-
-        if cnt == k {
-            break cur;
-        }
-
-        for i in 0..(cur % 10) {
-            let next = 10 * cur + i;
-            queue.push_back(next);
-        }
-    };
-
+    let ans = (2..(1 << 10))
+        .map(|bit| {
+            (0..=9)
+                .filter(|&i| (bit >> i) & 1 == 1)
+                .rev()
+                .fold(0_usize, |acc, x| 10 * acc + x)
+        })
+        .sorted()
+        .nth(k)
+        .unwrap();
     println!("{}", ans);
 }
