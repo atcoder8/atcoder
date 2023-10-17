@@ -1,8 +1,6 @@
 use modint2::Modint998244353;
 use proconio::input;
 
-use crate::factorial::Factorial;
-
 type Mint = Modint998244353;
 
 fn main() {
@@ -13,18 +11,34 @@ fn main() {
 
     aa.sort_unstable();
 
-    let mut fac: Factorial<Mint> = Factorial::new();
-
-    let mut ans = Mint::new(0);
-    for (i, &a) in aa.iter().enumerate() {
-        for j in 1..=i {
-            ans += Mint::new(a)
-                * fac.combinations(n, j)
-                * fac.combinations((2 * k).min(n), j)
-                * fac.combinations(n.saturating_sub(2 * k), i - j);
-        }
+    let mut fac = vec![Mint::new(1); n + 1];
+    for i in 0..n {
+        fac[i + 1] = fac[i] * (i + 1);
+    }
+    let mut inv_fac = vec![Mint::new(0); n + 1];
+    inv_fac[n] = fac[n].inv();
+    for i in (0..n).rev() {
+        inv_fac[i] = inv_fac[i + 1] * (i + 1);
     }
 
+    let combinations = |n: usize, k: usize| {
+        if n >= k {
+            fac[n] * inv_fac[k] * inv_fac[n - k]
+        } else {
+            Mint::new(0)
+        }
+    };
+
+    let f = |i: usize| {
+        fac[i] * fac[n - i] * (i - 1) * (1..=k).map(|l| combinations(n - l, i - 1)).sum::<Mint>()
+    };
+
+    let mut ff = vec![Mint::new(0); n + 1];
+    for i in 1..=n {
+        ff[i] = f(i);
+    }
+
+    let ans: Mint = (2..=n).map(|k| (ff[k] - ff[k - 1]) * aa[k - 1]).sum();
     println!("{}", ans);
 }
 
@@ -440,74 +454,4 @@ pub mod modint2 {
 
     /// The type `Modint` with 998244353 as the modulus.
     pub type Modint998244353 = Modint<998244353>;
-}
-
-pub mod factorial {
-    use std::ops::{Div, Mul};
-
-    pub struct Factorial<T> {
-        fac: Vec<T>,
-    }
-
-    impl<T> Default for Factorial<T>
-    where
-        T: Clone + From<usize> + Mul<Output = T> + Div<Output = T>,
-    {
-        fn default() -> Self {
-            Self::new()
-        }
-    }
-
-    impl<T> Factorial<T>
-    where
-        T: Clone + From<usize> + Mul<Output = T> + Div<Output = T>,
-    {
-        /// Constructs a new, empty `Factorial<T>`.
-        pub fn new() -> Self {
-            Self {
-                fac: vec![T::from(1)],
-            }
-        }
-
-        /// Returns the factorial of `n`.
-        pub fn factorial(&mut self, n: usize) -> T {
-            if self.fac.len() < n + 1 {
-                for i in (self.fac.len() - 1)..n {
-                    self.fac.push(self.fac[i].clone() * (i + 1).into());
-                }
-            }
-            self.fac[n].clone()
-        }
-
-        /// Returns the number of choices when selecting `k` from `n` and arranging them in a row.
-        pub fn permutations(&mut self, n: usize, k: usize) -> T {
-            if n < k {
-                T::from(0)
-            } else {
-                self.factorial(n) / self.factorial(n - k)
-            }
-        }
-
-        /// Returns the number of choices to select `k` from `n`.
-        pub fn combinations(&mut self, n: usize, k: usize) -> T {
-            if n < k {
-                T::from(0)
-            } else {
-                self.factorial(n) / (self.factorial(k) * self.factorial(n - k))
-            }
-        }
-
-        /// Calculate the number of cases when sample of `k` elements from a set of `n` elements, allowing for duplicates.
-        pub fn combinations_with_repetition(&mut self, n: usize, k: usize) -> T {
-            if n == 0 {
-                if k == 0 {
-                    T::from(1)
-                } else {
-                    T::from(0)
-                }
-            } else {
-                self.combinations(n + k - 1, k)
-            }
-        }
-    }
 }
