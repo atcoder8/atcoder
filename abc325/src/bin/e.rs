@@ -9,6 +9,7 @@ fn main() {
     }
 
     let mut car_costs = vec![None; n];
+    car_costs[0] = Some(0);
     let mut car_heap = BinaryHeap::from(vec![(Reverse(0), 0)]);
     while let Some((Reverse(cost), cur)) = car_heap.pop() {
         if car_costs[cur].is_some_and(|actual_cost| cost != actual_cost) {
@@ -27,6 +28,7 @@ fn main() {
     }
 
     let mut train_costs = vec![None; n];
+    train_costs[n - 1] = Some(0);
     let mut train_heap = BinaryHeap::from(vec![(Reverse(0), n - 1)]);
     while let Some((Reverse(cost), cur)) = train_heap.pop() {
         if train_costs[cur].is_some_and(|actual_cost| cost != actual_cost) {
@@ -48,7 +50,6 @@ fn main() {
         .iter()
         .zip(&train_costs)
         .map(|(&car_cost, &train_cost)| car_cost.unwrap() + train_cost.unwrap())
-        .chain([car_costs[n - 1].unwrap()])
         .min()
         .unwrap();
     println!("{}", ans);
