@@ -2,13 +2,18 @@ use itertools::Itertools;
 use proconio::{input, marker::Chars};
 
 fn main() {
-    let ans = solve();
-    match ans {
+    input! {
+        n: usize,
+        rr: Chars,
+        cc: Chars,
+    }
+
+    match solve(&rr, &cc) {
         Some(board) => {
             println!(
                 "Yes\n{}",
                 board
-                    .iter()
+                    .chunks(n)
                     .map(|line| line.iter().collect::<String>())
                     .join("\n")
             );
@@ -17,57 +22,24 @@ fn main() {
     }
 }
 
-fn solve() -> Option<Vec<Vec<char>>> {
-    input! {
-        n: usize,
-        rr: Chars,
-        cc: Chars,
-    }
+fn solve(rr: &[char], cc: &[char]) -> Option<Vec<char>> {
+    let n = rr.len();
 
-    let is_match = |board: &[Vec<char>]| {
-        for i in 0..n {
-            if (0..n)
-                .map(|j| board[i][j])
-                .filter(|&c| c != '.')
-                .sorted_unstable()
-                .collect_vec()
-                != vec!['A', 'B', 'C']
+    let is_ok = |board: &[char]| {
+        for col in 0..n {
+            if let Some(top) = (col..board.len())
+                .step_by(n)
+                .map(|idx| board[idx])
+                .find(|&c| c != '.')
             {
-                return false;
+                if top != cc[col] {
+                    return false;
+                }
             }
-        }
 
-        for j in 0..n {
-            if (0..n)
-                .map(|i| board[i][j])
-                .filter(|&c| c != '.')
-                .sorted_unstable()
-                .collect_vec()
-                != vec!['A', 'B', 'C']
-            {
-                return false;
-            }
-        }
-
-        for (i, &r) in rr.iter().enumerate() {
-            if (0..n).map(|j| board[i][j]).find(|&c| c != '.').unwrap() != r {
-                return false;
-            }
-        }
-
-        for (j, &c) in cc.iter().enumerate() {
-            if (0..n).map(|i| board[i][j]).find(|&c| c != '.').unwrap() != c {
-                return false;
-            }
-        }
-
-        true
-    };
-
-    let is_ok = |board: &[Vec<char>]| {
-        for j in 0..n {
-            if !(0..board.len())
-                .map(|i| board[i][j])
+            if !(col..board.len())
+                .step_by(n)
+                .map(|idx| board[idx])
                 .filter(|&c| c != '.')
                 .all_unique()
             {
@@ -78,27 +50,33 @@ fn solve() -> Option<Vec<Vec<char>>> {
         true
     };
 
-    let mut stack: Vec<Vec<Vec<char>>> = vec![vec![]];
+    let mut stack: Vec<Vec<char>> = vec![vec![]];
     while let Some(board) = stack.pop() {
-        if board.len() == n {
-            if is_match(&board) {
-                return Some(board);
-            }
-
-            continue;
+        if board.len() == n.pow(2) {
+            return Some(board);
         }
 
-        for positions in (0..n).permutations(3) {
+        let r = rr[board.len() / n];
+        let chars = vec![r, 'A', 'B', 'C'].into_iter().unique().collect_vec();
+        for positions in (0..n).combinations(3) {
             let mut line = vec!['.'; n];
-            for (c_idx, &pos) in positions.iter().enumerate() {
-                line[pos] = ['A', 'B', 'C'][c_idx];
+
+            for (&c, &pos) in chars.iter().zip(&positions) {
+                line[pos] = c;
             }
 
-            let mut next_board = board.clone();
-            next_board.push(line);
+            let mut next_board_1 = board.clone();
+            next_board_1.extend(line.clone());
+            if is_ok(&next_board_1) {
+                stack.push(next_board_1);
+            }
 
-            if is_ok(&next_board) {
-                stack.push(next_board);
+            line.swap(positions[1], positions[2]);
+
+            let mut next_board_2 = board.clone();
+            next_board_2.extend(line);
+            if is_ok(&next_board_2) {
+                stack.push(next_board_2);
             }
         }
     }
