@@ -48,16 +48,16 @@ fn main() {
         }
     }
 
-    let mut lazy_segtree = LazySegtree::<MMo>::new(5e5 as usize);
+    let mut lazy_segtree = LazySegtree::<MMo>::new(2 * 10_usize.pow(5));
 
     let mut ans = 0;
     let mut queue = VecDeque::new();
     for &(t, x) in &tx {
         queue.push_back((t, x));
-        lazy_segtree.apply_range(x..x + w, 1);
+        lazy_segtree.apply_range(x.saturating_sub(w)..x, 1);
         while let Some(&(head_t, head_x)) = queue.front() {
             if head_t + d <= t {
-                lazy_segtree.apply_range(head_x..head_x + w, -1);
+                lazy_segtree.apply_range(head_x.saturating_sub(w)..head_x, -1);
                 queue.pop_front();
             } else {
                 break;
