@@ -1,6 +1,5 @@
-// unfinished
-
-use im_rc::HashSet;
+use fixedbitset::FixedBitSet;
+use itertools::{enumerate, Itertools};
 use proconio::{input, marker::Usize1};
 
 fn main() {
@@ -8,9 +7,12 @@ fn main() {
         t: usize,
     }
 
-    for _ in 0..t {
-        println!("{}", if solve() { "Alice" } else { "Bob" });
-    }
+    println!(
+        "{}",
+        (0..t)
+            .map(|_| if solve() { "Alice" } else { "Bob" })
+            .join("\n")
+    );
 }
 
 fn solve() -> bool {
@@ -20,68 +22,66 @@ fn solve() -> bool {
         aa: [i64; n],
     }
 
-    let aa: Vec<Option<usize>> = aa
-        .iter()
-        .map(|&a| if a != -1 { Some(a as usize) } else { None })
-        .collect();
-
     let mut graph = vec![vec![]; n];
-    for (i, &p) in pp.iter().enumerate() {
-        graph[i + 1].push(p);
+    for (i, &p) in enumerate(&pp) {
         graph[p].push(i + 1);
     }
 
-    let mut alice_win = false;
-
-    rec(&graph, k, &aa, None, 0, &mut alice_win);
-
-    alice_win
-}
-
-fn rec(
-    graph: &Vec<Vec<usize>>,
-    k: usize,
-    aa: &Vec<Option<usize>>,
-    parent: Option<usize>,
-    cur: usize,
-    alice_win: &mut bool,
-) -> Option<HashSet<usize>> {
-    let mut union: HashSet<usize> = HashSet::new();
-    for &next in &graph[cur] {
-        if Some(next) == parent {
-            continue;
-        }
-
-        if let Some(set) = rec(graph, k, aa, Some(cur), next, alice_win) {
-            union.extend(set.into_iter());
-        } else {
-            return None;
-        }
+    #[derive(Debug, Clone)]
+    struct Status {
+        exists: FixedBitSet,
+        empty_num: usize,
     }
 
-    if let Some(a) = aa[cur] {
-        if a == k {
-            return None;
-        }
+    let mut statuses = vec![
+        Status {
+            exists: FixedBitSet::with_capacity(k + 1),
+            empty_num: 0
+        };
+        n
+    ];
 
-        if a < k {
-            union.insert(a);
-        }
-
-        if union.len() == k {
-            *alice_win = true;
-
-            return None;
-        }
-
-        return Some(union);
+    #[derive(Debug, Clone, PartialEq, Eq)]
+    enum DFSNode {
+        Forward(usize),
+        Back(usize),
     }
 
-    if union.len() == k - 1 {
-        *alice_win = true;
+    let mut stack = vec![DFSNode::Forward(0)];
+    while let Some(dfs_node) = stack.pop() {
+        match dfs_node {
+            DFSNode::Forward(cur) => {
+                stack.push(DFSNode::Back(cur));
+                stack.extend(graph[cur].iter().map(|&next| DFSNode::Forward(next)));
+            }
+            DFSNode::Back(cur) => {
+                if aa[cur] == -1 {
+                    statuses[cur].empty_num += 1;
+                } else {
+                    let a = aa[cur] as usize;
+                    if a <= k {
+                        statuses[cur].exists.insert(a);
+                    }
+                }
 
-        return None;
+                for &next in &graph[cur] {
+                    let child_exists = statuses[next].exists.clone();
+                    statuses[cur].exists.union_with(&child_exists);
+                    statuses[cur].empty_num += statuses[next].empty_num;
+                }
+            }
+        };
     }
 
-    return None;
+    let is_ok = |status: &Status| {
+        if status.exists[k] || status.empty_num >= 2 {
+            return false;
+        }
+
+        let shortage_num = k - status.exists.count_ones(0..k);
+
+        shortage_num == 0 || (shortage_num == 1 && status.empty_num == 1)
+    };
+
+    statuses.iter().any(|status| is_ok(&status))
 }
