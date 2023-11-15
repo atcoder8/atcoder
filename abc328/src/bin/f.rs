@@ -1,5 +1,3 @@
-// unfinished
-
 use itertools::{enumerate, Itertools};
 use proconio::{input, marker::Usize1};
 
@@ -12,49 +10,12 @@ fn main() {
     }
 
     let mut ans = vec![];
-    let mut xx = vec![None; n];
     let mut uf = UnionFind::new(n);
 
     for (i, &(a, b, d)) in enumerate(&abd) {
-        if uf.same(a, b) {
-            if xx[a].unwrap() - xx[b].unwrap() == d {
-                ans.push(i + 1);
-            }
-
-            continue;
+        if uf.merge(a, b, d).is_ok() {
+            ans.push(i + 1);
         }
-
-        match (xx[a].is_some(), xx[b].is_some()) {
-            (true, true) => {
-                if uf.size(a) <= uf.size(b) {
-                    for i in 0..n {
-                        if uf.same(i, a) {
-                            xx[i] = Some(xx[i].unwrap() - d);
-                        }
-                    }
-                } else {
-                    for i in 0..n {
-                        if uf.same(i, b) {
-                            xx[i] = Some(xx[i].unwrap() + d);
-                        }
-                    }
-                }
-            }
-            (true, false) => {
-                xx[b] = Some(xx[a].unwrap() + d);
-            }
-            (false, true) => {
-                xx[a] = Some(xx[b].unwrap() - d);
-            }
-            (false, false) => {
-                xx[a] = Some(d);
-                xx[b] = Some(0);
-            }
-        }
-
-        uf.merge(a, b);
-
-        ans.push(i + 1);
     }
 
     println!("{}", ans.iter().join(" "));
@@ -93,19 +54,6 @@ pub mod union_find {
     /// The time complexity of each query is `O(A(n))`.
     /// where `n` is the number of nodes in the graph and
     /// `A(n)` is the inverse of the Ackermann function.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use atcoder8_library::union_find::UnionFind;
-    ///
-    /// let mut uf = UnionFind::new(3);
-    /// assert_eq!(uf.same(0, 2), false);
-    /// uf.merge(0, 1);
-    /// assert_eq!(uf.same(0, 2), false);
-    /// uf.merge(1, 2);
-    /// assert_eq!(uf.same(0, 2), true);
-    /// ```
     #[derive(Debug, Default, Clone)]
     pub struct UnionFind {
         /// For each node, one of the following is stored.
@@ -116,44 +64,23 @@ pub mod union_find {
 
         /// Number of connected components.
         group_num: usize,
+
+        potentials: Vec<i64>,
     }
 
     impl UnionFind {
         /// Create an undirected graph with `n` nodes and `0` edges.
-        ///
-        /// # Examples
-        ///
-        /// ```
-        /// use atcoder8_library::union_find::UnionFind;
-        ///
-        /// let mut uf = UnionFind::new(3);
-        /// assert_eq!(uf.same(0, 2), false);
-        /// uf.merge(0, 1);
-        /// assert_eq!(uf.same(0, 2), false);
-        /// uf.merge(2, 1);
-        /// assert_eq!(uf.same(0, 2), true);
-        /// ```
         pub fn new(n: usize) -> Self {
             UnionFind {
                 parent_or_size: vec![ParentOrSize::Size(1); n],
                 group_num: n,
+                potentials: vec![0; n],
             }
         }
 
         /// Return the representative node of the connected component containing node `a`.
         ///
         /// At that time, perform path compression on the nodes on the path from node `a` to the representative node.
-        ///
-        /// # Examples
-        ///
-        /// ```
-        /// use atcoder8_library::union_find::UnionFind;
-        ///
-        /// let mut uf = UnionFind::new(3);
-        /// uf.merge(1, 2);
-        /// assert_eq!(uf.leader(0), 0);
-        /// assert_eq!(uf.leader(1), uf.leader(2));
-        /// ```
         pub fn leader(&mut self, a: usize) -> usize {
             // If node `a` is a representative node of the connected component, return `a`.
             if let ParentOrSize::Size(_) = self.parent_or_size[a] {
@@ -161,7 +88,7 @@ pub mod union_find {
             }
 
             // Path from node `a` to the representative node.
-            let mut path = vec![];
+            let mut path = vec![a];
 
             // Current node.
             let mut current = a;
@@ -169,19 +96,22 @@ pub mod union_find {
             // Record the path to the representative node.
             while let ParentOrSize::Parent(parent) = self.parent_or_size[current] {
                 // Add current node to the path.
-                path.push(current);
+                path.push(parent);
 
                 // Move to the parent node.
                 current = parent;
             }
 
+            path.reverse();
+
             // The representative node of the connected component.
             let leader = current;
 
             // Set nodes on the path as direct children of the representative node.
-            path.iter().for_each(|&node| {
-                self.parent_or_size[node] = ParentOrSize::Parent(leader);
-            });
+            for pair in path.windows(2) {
+                self.parent_or_size[pair[1]] = ParentOrSize::Parent(leader);
+                self.potentials[pair[1]] += self.potentials[pair[0]];
+            }
 
             // Return the representative node of the connected component.
             leader
@@ -190,38 +120,25 @@ pub mod union_find {
         /// Return whether two nodes `a` and `b` are in the same connected component.
         ///
         /// # Examples
-        ///
-        /// ```
-        /// use atcoder8_library::union_find::UnionFind;
-        ///
-        /// let mut uf = UnionFind::new(3);
-        /// assert_eq!(uf.same(0, 2), false);
-        /// uf.merge(0, 1);
-        /// assert_eq!(uf.same(0, 2), false);
-        /// uf.merge(2, 1);
-        /// assert_eq!(uf.same(0, 2), true);
-        /// ```
         pub fn same(&mut self, a: usize, b: usize) -> bool {
             self.leader(a) == self.leader(b)
+        }
+
+        pub fn potential(&mut self, a: usize, b: usize) -> Option<i64> {
+            let leader_a = self.leader(a);
+            let leader_b = self.leader(b);
+
+            if leader_a == leader_b {
+                Some(self.potentials[b] - self.potentials[a])
+            } else {
+                None
+            }
         }
 
         /// Merge each connected component containing nodes `a` and `b`.
         ///
         /// Return `true` if different connected components are newly merged.
-        ///
-        /// # Examples
-        ///
-        /// ```
-        /// use atcoder8_library::union_find::UnionFind;
-        ///
-        /// let mut uf = UnionFind::new(3);
-        /// assert_eq!(uf.same(0, 2), false);
-        /// uf.merge(0, 1);
-        /// assert_eq!(uf.same(0, 2), false);
-        /// uf.merge(2, 1);
-        /// assert_eq!(uf.same(0, 2), true);
-        /// ```
-        pub fn merge(&mut self, a: usize, b: usize) -> bool {
+        pub fn merge(&mut self, a: usize, b: usize, potential_diff: i64) -> Result<bool, i64> {
             // Representative node of the connected component that contains the node `a`.
             let leader_a = self.leader(a);
             // Representative node of the connected component that contains the node `b`.
@@ -229,7 +146,11 @@ pub mod union_find {
 
             // If nodes `a` and `b` are in the same connected component, return `false` without processing.
             if leader_a == leader_b {
-                return false;
+                if self.potentials[b] - self.potentials[a] == potential_diff {
+                    return Ok(false);
+                } else {
+                    return Err(self.potentials[b] - self.potentials[a]);
+                }
             }
 
             // Number of nodes of the component containing node `a`.
@@ -243,19 +164,22 @@ pub mod union_find {
 
             // Set the parent of the representative node of the smaller sized connected component
             // to be the parent of the other connected component.
+            let leader_potential_diff = potential_diff + self.potentials[a] - self.potentials[b];
             if component_size_a <= component_size_b {
                 self.parent_or_size[leader_a] = ParentOrSize::Parent(leader_b);
                 self.parent_or_size[leader_b] = ParentOrSize::Size(merged_component_size);
+                self.potentials[leader_a] = -leader_potential_diff;
             } else {
                 self.parent_or_size[leader_b] = ParentOrSize::Parent(leader_a);
                 self.parent_or_size[leader_a] = ParentOrSize::Size(merged_component_size);
+                self.potentials[leader_b] = leader_potential_diff;
             }
 
             // Decrease the number of connected components by one.
             self.group_num -= 1;
 
             // Return `true` because different connected components are newly combined.
-            true
+            Ok(true)
         }
 
         /// Return a list of connected components.
@@ -264,17 +188,6 @@ pub mod union_find {
         /// The indexes of the nodes in each connected component are arranged in ascending order.
         /// The list of connected components is sorted in ascending order
         /// with respect to the smallest index of the included nodes.
-        ///
-        /// # Examples
-        ///
-        /// ```
-        /// use atcoder8_library::union_find::UnionFind;
-        ///
-        /// let mut uf = UnionFind::new(5);
-        /// uf.merge(1, 2);
-        /// uf.merge(2, 3);
-        /// assert_eq!(uf.groups(), vec![vec![0], vec![1, 2, 3], vec![4]]);
-        /// ```
         pub fn groups(&mut self) -> Vec<Vec<usize>> {
             // Number of nodes in graph.
             let element_num = self.parent_or_size.len();
@@ -304,19 +217,6 @@ pub mod union_find {
         }
 
         /// Return the number of nodes in the connected component to which node `a` belongs.
-        ///
-        /// # Examples
-        ///
-        /// ```
-        /// use atcoder8_library::union_find::UnionFind;
-        ///
-        /// let mut uf = UnionFind::new(3);
-        /// assert_eq!(uf.size(0), 1);
-        /// uf.merge(0, 1);
-        /// assert_eq!(uf.size(0), 2);
-        /// uf.merge(2, 1);
-        /// assert_eq!(uf.size(0), 3);
-        /// ```
         pub fn size(&mut self, a: usize) -> usize {
             let leader = self.leader(a);
 
@@ -327,52 +227,17 @@ pub mod union_find {
         }
 
         /// Add a new node with degree `0`.
-        ///
-        /// # Examples
-        ///
-        /// ```
-        /// use atcoder8_library::union_find::UnionFind;
-        ///
-        /// let mut uf = UnionFind::new(4);
-        /// uf.merge(1, 2);
-        /// uf.merge(2, 3);
-        /// assert_eq!(uf.groups(), vec![vec![0], vec![1, 2, 3]]);
-        /// uf.add();
-        /// assert_eq!(uf.groups(), vec![vec![0], vec![1, 2, 3], vec![4]]);
-        /// ```
         pub fn add(&mut self) {
             self.parent_or_size.push(ParentOrSize::Size(1));
             self.group_num += 1;
         }
 
         /// Return the number of connected components.
-        ///
-        /// # Examples
-        ///
-        /// ```
-        /// use atcoder8_library::union_find::UnionFind;
-        ///
-        /// let mut uf = UnionFind::new(3);
-        /// assert_eq!(uf.group_num(), 3);
-        /// uf.merge(0, 1);
-        /// assert_eq!(uf.group_num(), 2);
-        /// uf.merge(2, 1);
-        /// assert_eq!(uf.group_num(), 1);
-        /// ```
         pub fn group_num(&self) -> usize {
             self.group_num
         }
 
         /// Return the number of nodes in the graph.
-        ///
-        /// # Examples
-        ///
-        /// ```
-        /// use atcoder8_library::union_find::UnionFind;
-        ///
-        /// let mut uf = UnionFind::new(5);
-        /// assert_eq!(uf.elem_num(), 5);
-        /// ```
         pub fn elem_num(&self) -> usize {
             self.parent_or_size.len()
         }
