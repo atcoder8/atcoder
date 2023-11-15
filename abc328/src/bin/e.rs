@@ -1,3 +1,4 @@
+use itertools::Itertools;
 use proconio::{input, marker::Usize1};
 use union_find::UnionFind;
 
@@ -7,47 +8,28 @@ fn main() {
         uvw: [(Usize1, Usize1, usize); m],
     }
 
-    let ans = dfs(n, k, &uvw, UnionFind::new(n), 0, 0).unwrap();
+    let calc_cost = |edge_indexes: &[usize]| {
+        let mut uf = UnionFind::new(n);
+        let mut sum_weight = 0;
+        for &edge_idx in edge_indexes {
+            let (u, v, w) = uvw[edge_idx];
+            uf.merge(u, v);
+            sum_weight += w;
+        }
+
+        if uf.group_num() == 1 {
+            Some(sum_weight % k)
+        } else {
+            None
+        }
+    };
+
+    let ans = (0..m)
+        .combinations(n - 1)
+        .filter_map(|edge_indexes| calc_cost(&edge_indexes))
+        .min()
+        .unwrap();
     println!("{}", ans);
-}
-
-fn dfs(
-    n: usize,
-    k: usize,
-    edges: &[(usize, usize, usize)],
-    mut uf: UnionFind,
-    sum_weight: usize,
-    cur_edge_idx: usize,
-) -> Option<usize> {
-    if (1..n).all(|u| uf.same(0, u)) {
-        return Some(sum_weight % k);
-    }
-
-    if cur_edge_idx == edges.len() {
-        return None;
-    }
-
-    let mut min_cost = None;
-
-    if let Some(cost) = dfs(n, k, edges, uf.clone(), sum_weight, cur_edge_idx + 1) {
-        if min_cost.is_none() || cost < min_cost.unwrap() {
-            min_cost = Some(cost);
-        }
-    }
-
-    let (u, v, w) = edges[cur_edge_idx];
-    if !uf.same(u, v) {
-        let mut next_uf = uf.clone();
-        next_uf.merge(u, v);
-
-        if let Some(cost) = dfs(n, k, edges, next_uf, sum_weight + w, cur_edge_idx + 1) {
-            if min_cost.is_none() || cost < min_cost.unwrap() {
-                min_cost = Some(cost);
-            }
-        }
-    }
-
-    min_cost
 }
 
 pub mod union_find {
