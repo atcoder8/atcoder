@@ -1,3 +1,4 @@
+use itertools::Itertools;
 use proconio::{input, marker::Chars};
 
 fn main() {
@@ -11,31 +12,28 @@ fn solve() -> bool {
         t: Chars,
     }
 
-    let mut complete = vec![false; n + 1];
-    let mut partial = vec![false; n + 1];
-    partial[0] = true;
-    for i in 0..n {
-        if !complete[i] && !partial[i] {
+    let mut deleted = vec![false; n];
+    let mut used = vec![false; n];
+    let mut stack = (0..=n - m).filter(|&i| s[i..i + m] == t).collect_vec();
+    while let Some(delete_pos) = stack.pop() {
+        if used[delete_pos] {
             continue;
         }
 
-        for extend_len in 1..=m.min(n - i) {
-            let overlap_len = m - extend_len;
+        used[delete_pos] = true;
 
-            if overlap_len > i || !complete[i] && s[i - overlap_len..i] != t[..overlap_len] {
-                continue;
-            }
+        deleted[delete_pos..delete_pos + m]
+            .iter_mut()
+            .for_each(|x| {
+                *x = true;
+            });
 
-            let match_len = (0..extend_len)
-                .take_while(|&j| s[i + j] == t[overlap_len + j])
-                .count();
-            if match_len == extend_len {
-                complete[i + extend_len] = true;
-            } else {
-                partial[i + match_len] = true;
+        for i in delete_pos.saturating_sub(m - 1)..=(delete_pos + m - 1).min(n - m) {
+            if !used[i] && (0..m).all(|j| deleted[i + j] || s[i + j] == t[j]) {
+                stack.push(i);
             }
         }
     }
 
-    complete[n]
+    deleted.iter().all(|&x| x)
 }
