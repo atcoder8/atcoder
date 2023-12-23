@@ -21,6 +21,7 @@ fn main() {
     for (i, j) in iproduct!(0..h, 0..w) {
         if sss[i][j] != '#' {
             red_num += 1;
+
             continue;
         }
 
@@ -33,9 +34,7 @@ fn main() {
         }
     }
 
-    let green_comp_num = uf.group_num() - red_num;
-    let mut ans = Mint::new(green_comp_num);
-    let inv_red_num = Mint::new(red_num).inv();
+    let mut sum_reduce_num = Mint::new(0);
     for (row, col) in iproduct!(0..h, 0..w) {
         if sss[row][col] != '.' {
             continue;
@@ -56,13 +55,11 @@ fn main() {
             }
         }
 
-        if green_leaders.is_empty() {
-            ans += inv_red_num;
-        } else {
-            ans -= inv_red_num * (green_leaders.iter().unique().count() - 1);
-        }
+        sum_reduce_num += Mint::new(green_leaders.iter().unique().count()) - 1;
     }
 
+    let green_num = uf.group_num() - red_num;
+    let ans = Mint::new(green_num) - sum_reduce_num / red_num;
     println!("{}", ans);
 }
 
