@@ -1,40 +1,65 @@
-use std::cmp::Ordering;
-
 use itertools::Itertools;
+use modint2::Modint998244353;
 use proconio::{input, marker::Usize1};
 
 use crate::union_find::UnionFind;
 
+type Mint = Modint998244353;
+
 fn main() {
     input! {
         n: usize,
-        pq: [(Usize1, Usize1); n],
+        pq: [(Usize1, Usize1); n - 1],
+    }
+
+    #[derive(Debug, Clone, Copy)]
+    struct Team {
+        left_team: usize,
+        left_exp: Mint,
+        right_team: usize,
+        right_exp: Mint,
     }
 
     let mut uf = UnionFind::new(n);
-
-    let mut leader_pairs = vec![];
+    let mut leader_to_team = (0..n).map(|i| i).collect_vec();
+    let mut teams: Vec<Option<Team>> = vec![None; n];
+    teams.reserve(n - 1);
+    let mut size_per_team = vec![1; n];
+    size_per_team.reserve(n - 1);
     for &(p, q) in &pq {
-        let mut leader_p = uf.leader(p);
-        let mut leader_q = uf.leader(q);
+        let left_team = leader_to_team[uf.leader(p)];
+        let left_team_size = size_per_team[left_team];
+        let right_team = leader_to_team[uf.leader(q)];
+        let right_team_size = size_per_team[right_team];
+        let merged_team_size = left_team_size + right_team_size;
 
-        if leader_p > leader_q {
-            std::mem::swap(&mut leader_p, &mut leader_q);
+        let merged_team = Team {
+            left_team,
+            left_exp: Mint::frac(left_team_size, merged_team_size),
+            right_team,
+            right_exp: Mint::frac(right_team_size, merged_team_size),
+        };
+
+        uf.merge(p, q);
+        leader_to_team[uf.leader(p)] = teams.len();
+        teams.push(Some(merged_team));
+        size_per_team.push(merged_team_size);
+    }
+
+    let mut expected_values = vec![Mint::new(0); n];
+    let mut stack = vec![(2 * n - 2, Mint::new(0))];
+    while let Some((cur, exp)) = stack.pop() {
+        if cur < n {
+            expected_values[cur] = exp;
+            continue;
         }
 
-        leader_pairs.push((leader_p, leader_q));
+        let team = teams[cur].unwrap();
+        stack.push((team.left_team, exp + team.left_exp));
+        stack.push((team.right_team, exp + team.right_exp));
     }
 
-    let mut players = (0..n).collect_vec();
-    for &(p, _) in &leader_pairs {
-        players.sort_unstable_by(|&player1, _| {
-            if uf.leader(player1) == p {
-                Ordering::Less
-            } else {
-                Ordering::Greater
-            }
-        });
-    }
+    println!("{}", expected_values.iter().join(" "));
 }
 
 pub mod union_find {
