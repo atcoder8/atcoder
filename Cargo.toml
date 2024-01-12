@@ -1,5 +1,7 @@
 [workspace]
 
+resolver = "2"
+
 members = [
   "abc226",
   "abc228",
