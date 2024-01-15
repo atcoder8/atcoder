@@ -1,27 +1,21 @@
-use itertools::izip;
 use proconio::input;
 
 fn main() {
     input! {
         n: usize,
-        aa: [usize; n],
+        mut aa: [usize; n],
     }
 
-    let mut left_levels = vec![0; n];
-    left_levels[0] = 1;
+    aa[0] = 1;
     for i in 1..n {
-        left_levels[i] = (left_levels[i - 1] + 1).min(aa[i]);
+        aa[i] = aa[i].min(aa[i - 1] + 1);
     }
 
-    let mut right_levels = vec![0; n];
-    right_levels[n - 1] = 1;
+    aa[n - 1] = 1;
     for i in (0..n - 1).rev() {
-        right_levels[i] = (right_levels[i + 1] + 1).min(aa[i]);
+        aa[i] = aa[i].min(aa[i + 1] + 1);
     }
 
-    let ans = izip!(left_levels, right_levels)
-        .map(|(x, y)| x.min(y))
-        .max()
-        .unwrap();
+    let ans = *aa.iter().max().unwrap();
     println!("{}", ans);
 }
