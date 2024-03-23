@@ -48,13 +48,9 @@ fn solve() -> usize {
                 idx = 0;
                 cycle += 1;
             }
-
-            if cycle >= n {
-                return false;
-            }
         }
 
-        true
+        cycle + ((idx != 0) as usize) <= n
     };
 
     let mut ok = 0_usize;
