@@ -1,0 +1,30 @@
+---
+type: Batch
+timelimit: 2s
+match: Lines
+
+cases:
+  - name: sample1
+    in: |
+      3 3 2
+      )))(()
+    out: |
+      5
+  - name: sample2
+    in: |
+      1 175 1000000000
+      ()
+    out: |
+      0
+  - name: sample3
+    in: |
+      7 2622 26092458
+      ))()((((()()((
+    out: |
+      52187538
+
+extend:
+  - type: Text
+    path: "./b"
+    in: /in/*.txt
+    out: /out/*.txt

@@ -1,0 +1,66 @@
+---
+type: Batch
+timelimit: 4s
+match: Lines
+
+cases:
+  - name: sample1
+    in: |
+      5
+      ab
+      rac
+      a
+      dab
+      ra
+    out: |
+      3
+  - name: sample2
+    in: |
+      3
+      kitekuma
+      nok
+      zkou
+    out: |
+      0
+  - name: sample3
+    in: |
+      31
+      arc
+      arrc
+      rc
+      rac
+      a
+      rc
+      aara
+      ra
+      caac
+      cr
+      carr
+      rrra
+      ac
+      r
+      ccr
+      a
+      c
+      aa
+      acc
+      rar
+      r
+      c
+      r
+      a
+      r
+      rc
+      a
+      r
+      rc
+      cr
+      c
+    out: |
+      175
+
+extend:
+  - type: Text
+    path: "./f"
+    in: /in/*.txt
+    out: /out/*.txt
