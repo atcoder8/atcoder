@@ -6,10 +6,9 @@ fn main() {
         s: String,
     }
 
-    let n = s.len();
-    let ans = (0..=n)
+    let ans = (0..=s.len())
         .tuple_combinations()
-        .map(|(left, right)| s[left..right].to_string())
+        .map(|(left, right)| &s[left..right])
         .unique()
         .count();
     println!("{}", ans);
