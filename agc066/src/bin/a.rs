@@ -1,8 +1,6 @@
-use itertools::{enumerate, iproduct, Itertools};
-use ndarray::Array;
+use itertools::Itertools;
+use ndarray::{Array, Axis};
 use proconio::input;
-
-const DIFFS: [(usize, usize); 4] = [(!0, 0), (0, !0), (0, 1), (1, 0)];
 
 fn main() {
     input! {
@@ -10,50 +8,42 @@ fn main() {
         aaa: [i64; n.pow(2)],
     }
 
-    let mut grid = Array::from_shape_vec((n, n), aaa).unwrap();
+    let cost_limit = d * n.pow(2) as i64 / 2;
+    let d2 = 2 * d;
 
-    let sorted_coords = iproduct!(0..n, 0..n)
-        .sorted_unstable_by_key(|&coord| grid[coord])
-        .collect_vec();
-    let mut label_mat = Array::from_elem((n, n), 0_usize);
-    for (i, &coord) in enumerate(&sorted_coords) {
-        label_mat[coord] = i;
-    }
+    let grid = Array::from_shape_vec((n, n), aaa).unwrap();
 
-    for coord in sorted_coords {
-        let mut stack = vec![coord];
-        while let Some(coord) = stack.pop() {
-            let label = label_mat[coord];
-            let (row, col) = coord;
+    let solve = |base: i64| {
+        let rems = [base, (base + d) % d2];
 
-            for (diff_row, diff_col) in DIFFS {
-                let next_row = row.wrapping_add(diff_row);
-                let next_col = col.wrapping_add(diff_col);
+        let mut updated_grid = Array::from_elem((n, n), 0_i64);
+        let mut cost = 0;
 
-                if next_row >= n || next_col >= n {
-                    continue;
-                }
+        for (coord, &a) in grid.indexed_iter() {
+            let rem = rems[(coord.0 + coord.1) % 2];
 
-                let next_coord = (next_row, next_col);
+            let diff = ((a - rem) % d2 + d2) % d2;
 
-                let nei_label = label_mat[next_coord];
+            if diff <= d2 - diff {
+                updated_grid[coord] = a - diff;
+                cost += diff;
+            } else {
+                updated_grid[coord] = a + d2 - diff;
+                cost += d2 - diff;
+            }
 
-                if nei_label < label {
-                    if grid[next_coord] > grid[coord] - d {
-                        grid[next_coord] = grid[coord] + d;
-                        stack.push(next_coord);
-                    }
-                } else {
-                    if grid[next_coord] < grid[coord] + d {
-                        grid[next_coord] = grid[coord] + d;
-                        stack.push(next_coord);
-                    }
-                }
+            if cost > cost_limit {
+                return None;
             }
         }
-    }
 
-    for row in 0..n {
-        println!("{}", (0..n).map(|col| grid[(row, col)]).join(" "));
-    }
+        Some(updated_grid)
+    };
+
+    let grid = solve(0).or(solve(d)).unwrap();
+    let ans = grid
+        .axis_iter(Axis(0))
+        .map(|line| line.iter().join(" "))
+        .join("\n");
+    println!("{}", ans);
 }
