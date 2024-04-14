@@ -1,86 +1,70 @@
-// unfinished
-
-use std::collections::BTreeMap;
-
-use itertools::enumerate;
+use itertools::{enumerate, Itertools};
 use modint2::Modint998244353;
-use num::Integer;
 use proconio::input;
 
 type Mint = Modint998244353;
 
 fn main() {
-    println!("{}", solve());
-}
-
-fn solve() -> Mint {
     input! {
         (n, m): (usize, usize),
         aa: [usize; n],
     }
 
-    if m == 1 {
-        let one_count = aa.iter().filter(|&&a| a == 1).count();
-        return Mint::new(2).pow(one_count) - 1;
-    }
-
+    // Mを素因数分解する
     let factors = prime_factorization(m);
+
+    // Mの素因数の種類数
     let pn = factors.len();
 
-    let mut raised_vec_each_pi = vec![vec![]; pn + 1];
-    for (pi, &(p, e)) in enumerate(&factors) {
-        let mut raised_vec = vec![1; e + 1];
-        for exp in 0..e {
-            raised_vec[exp + 1] = p * raised_vec[exp];
-        }
+    // Mの素因数pと対応する指数eの組それぞれに対してp^eを求める
+    let raised_primes = factors.iter().map(|&(p, e)| p.pow(e as u32)).collect_vec();
 
-        raised_vec_each_pi[pi] = raised_vec;
-    }
-
-    let is_ok = |a: usize| {
-        let mut t = a;
-
-        for (pi, &(_, e)) in enumerate(&factors) {
-            let mut ok = 0_usize;
-            let mut ng = e + 1;
-
-            while ok.abs_diff(ng) > 1 {
-                let mid = (ok + ng) / 2;
-
-                if t % raised_vec_each_pi[pi][mid] == 0 {
-                    ok = mid;
-                } else {
-                    ng = mid;
-                }
+    // Mの各素因数pと対応する指数eについてaがp^eを約数にもつかどうかをビット列に格納する
+    let to_bits = |a: usize| {
+        let mut bits = 0_usize;
+        for (pi, raised_p) in enumerate(&raised_primes) {
+            if a % raised_p == 0 {
+                bits |= 1 << pi;
             }
-
-            t /= raised_vec_each_pi[pi][ok];
         }
 
-        if t != 1 {
-            return false;
-        }
-
-        true
+        bits
     };
 
-    let mut dp: BTreeMap<usize, Mint> = BTreeMap::new();
-    dp.insert(1, Mint::new(1));
-
+    // 各ビット列に対応するAの要素の個数を求める
+    let mut counts_per_bits = vec![0_usize; 1 << pn];
     for &a in &aa {
-        if !is_ok(a) {
+        if m % a != 0 {
             continue;
         }
 
-        let mut next_dp = dp.clone();
-        for (prev, comb_num) in dp {
-            *next_dp.entry(prev.lcm(&a)).or_default() += comb_num;
-        }
-
-        dp = next_dp;
+        let bits = to_bits(a);
+        counts_per_bits[bits] += 1;
     }
 
-    *dp.get(&m).unwrap_or(&Mint::new(0))
+    // 2の冪乗を計算する
+    let mut raised = vec![Mint::new(1); n + 1];
+    for i in 0..n {
+        raised[i + 1] = raised[i] * 2;
+    }
+
+    // bitDP
+    let mut dp = vec![Mint::new(0); 1 << pn];
+    dp[0].set_rem(1);
+    for add_bit in 0..1 << pn {
+        let cnt = counts_per_bits[add_bit];
+        let coef = raised[cnt] - 1;
+
+        for bit in (0..1 << pn).rev() {
+            let comb_num = dp[bit];
+            dp[bit | add_bit] += coef * comb_num;
+        }
+    }
+    // 空の部分列を除外する
+    dp[0] -= 1;
+
+    let ans = dp[(1 << pn) - 1];
+    println!("{}", ans);
 }
 
 /// Performs prime factorization of `n`.
