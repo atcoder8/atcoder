@@ -16,3 +16,4 @@ a.out
 .ac-venv/
 template-cargo-lock.toml
 test/
+**/testcases/
