@@ -1,5 +1,3 @@
-use std::collections::BTreeSet;
-
 use itertools::Itertools;
 use proconio::{input, marker::Usize1};
 
@@ -9,42 +7,29 @@ fn main() {
         ab: [(Usize1, Usize1); m],
     }
 
-    let mut init_counts = vec![0; n];
-    let mut coords = ab.clone();
-    for &(_a, b) in &ab {
-        init_counts[b] += 1;
+    let mut flags = vec![false; n];
+    for &(a, b) in &ab {
+        flags[(n + b - a) % n] = true;
     }
-    let mut set: BTreeSet<(usize, usize)> = (0..n).map(|col| (0, col)).collect();
 
-    for row in 0..n {
-        let rem = m - ab.iter().filter(|&&(a, _b)| a == row).count();
-        let bb = ab
-            .iter()
-            .filter(|&&(a, _b)| a == row)
-            .map(|&(_a, b)| b)
-            .collect_vec();
-        let small = set
-            .iter()
-            .filter(|&&(cnt, col)| !bb.contains(&col) && cnt + init_counts[col] < m)
-            .take(rem)
-            .cloned()
-            .collect_vec();
-        for &(cnt, col) in &small {
-            coords.push((row, col));
+    let mut shortage = m - flags.iter().filter(|&&flag| flag).count();
+    for i in 0..n {
+        if shortage == 0 {
+            break;
+        }
 
-            set.remove(&(cnt, col));
-            set.insert((cnt + 1, col));
+        if !flags[i] {
+            flags[i] = true;
+            shortage -= 1;
         }
     }
 
-    coords.sort_unstable();
+    let coords = (0..n)
+        .filter(|&start| flags[start])
+        .flat_map(|start| (0..n).map(move |row| (row, (start + row) % n)));
 
-    println!(
-        "{}\n{}",
-        coords.len(),
-        coords
-            .iter()
-            .map(|(row, col)| format!("{} {}", row + 1, col + 1))
-            .join("\n")
-    );
+    let ans = coords
+        .map(|(row, col)| format!("{} {}", row + 1, col + 1))
+        .join("\n");
+    println!("{}\n{}", n * m, ans);
 }
