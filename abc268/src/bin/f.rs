@@ -1,47 +1,38 @@
-// unfinished
+use proconio::input;
 
 fn main() {
-    let n = {
-        let mut line = String::new();
-        std::io::stdin().read_line(&mut line).unwrap();
-        line.trim().parse::<usize>().unwrap()
-    };
-    let mut ccc: Vec<Vec<char>> = vec![];
-    for _ in 0..n {
-        let mut line = String::new();
-        std::io::stdin().read_line(&mut line).unwrap();
-        ccc.push(line.trim().chars().collect());
+    input! {
+        n: usize,
+        ss: [String; n],
     }
 
-    ccc.sort_by_cached_key(|cc| calc_score(cc));
-
-    let connected_ccc: Vec<&char> = ccc.iter().flatten().collect();
-
-    let mut ans = 0;
-    let mut x_cnt = 0;
-
-    for &c in connected_ccc {
-        if c == 'X' {
-            x_cnt += 1;
-        } else {
-            ans += c.to_digit(10).unwrap() as usize * x_cnt;
-        }
-    }
-
-    println!("{}", ans);
-}
-
-fn calc_score(cc: &[char]) -> usize {
     let mut score = 0;
-    let mut x_cnt = 1;
+    let mut xy = vec![];
 
-    for &c in cc.iter() {
-        if c == 'X' {
-            x_cnt += 1;
-        } else {
-            score += c.to_digit(10).unwrap() as usize * x_cnt;
+    for s in &ss {
+        let mut x_cnt = 0;
+        let mut sum = 0;
+
+        for c in s.chars() {
+            if c == 'X' {
+                x_cnt += 1;
+            } else {
+                let d = c.to_digit(10).unwrap() as usize;
+                score += x_cnt * d;
+                sum += d;
+            }
         }
+
+        xy.push((x_cnt, sum));
     }
 
-    score
+    xy.sort_unstable_by(|(x1, y1), (x2, y2)| (x2 * y1).cmp(&(x1 * y2)));
+
+    let mut x_cnt = 0;
+    for &(x, y) in &xy {
+        score += x_cnt * y;
+        x_cnt += x;
+    }
+
+    println!("{}", score);
 }
