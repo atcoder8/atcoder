@@ -1,80 +1,104 @@
-// unfinished
-
-use std::collections::VecDeque;
+use itertools::{enumerate, Itertools};
+use proconio::{input, marker::Usize1};
 
 fn main() {
-    let n = {
-        let mut line = String::new();
-        std::io::stdin().read_line(&mut line).unwrap();
-        line.trim().parse::<usize>().unwrap()
-    };
-    let mut ab = Vec::new();
-    for _ in 0..n {
-        ab.push({
-            let mut line = String::new();
-            std::io::stdin().read_line(&mut line).unwrap();
-            let mut iter = line.split_whitespace();
-            (
-                iter.next().unwrap().parse::<usize>().unwrap() - 1,
-                iter.next().unwrap().parse::<usize>().unwrap() - 1,
-            )
-        });
-    }
-    let q = {
-        let mut line = String::new();
-        std::io::stdin().read_line(&mut line).unwrap();
-        line.trim().parse::<usize>().unwrap()
-    };
-    let mut uk = Vec::new();
-    for _ in 0..q {
-        uk.push({
-            let mut line = String::new();
-            std::io::stdin().read_line(&mut line).unwrap();
-            let mut iter = line.split_whitespace();
-            (
-                iter.next().unwrap().parse::<usize>().unwrap() - 1,
-                iter.next().unwrap().parse::<usize>().unwrap(),
-            )
-        });
+    input! {
+        n: usize,
+        ab: [(Usize1, Usize1); n - 1],
+        q: usize,
+        uk: [(Usize1, usize); q],
     }
 
-    let mut graph = vec![vec![]; n as usize];
-    for &(a, b) in ab.iter() {
-        graph[a as usize].push(b);
-        graph[b as usize].push(a);
+    let mut graph = vec![vec![]; n];
+    for &(u, v) in &ab {
+        graph[u].push(v);
+        graph[v].push(u);
     }
-    graph.iter_mut().for_each(|x| x.sort_unstable());
 
-    let mut parent: Vec<Option<usize>> = vec![None; n];
-    let mut dist = vec![0; n];
-    let mut que = VecDeque::from(vec![0]);
-    let mut visited = vec![false; n];
-    visited[0] = true;
+    let (farthest_node_1, _) = find_farthest_point(&graph, 0);
+    let (farthest_node_2, _) = find_farthest_point(&graph, farthest_node_1);
 
-    while let Some(curr) = que.pop_front() {
-        for &next in graph[curr].iter() {
-            if visited[next] {
-                continue;
+    let mut queries_each_node = vec![vec![]; n];
+    for (qi, &(u, k)) in enumerate(&uk) {
+        queries_each_node[u].push((qi, k));
+    }
+
+    enum DFSNode {
+        Forward { par: Option<usize>, cur: usize },
+        Backward,
+    }
+
+    let mut other_nodes: Vec<Option<usize>> = vec![None; q];
+
+    for farthest_node in [farthest_node_1, farthest_node_2] {
+        let mut stack = vec![
+            DFSNode::Backward,
+            DFSNode::Forward {
+                par: None,
+                cur: farthest_node,
+            },
+        ];
+        let mut path = vec![];
+
+        while let Some(dfs_node) = stack.pop() {
+            match dfs_node {
+                DFSNode::Forward { par, cur } => {
+                    for &(qi, k) in &queries_each_node[cur] {
+                        if path.len() >= k {
+                            other_nodes[qi] = Some(path[path.len() - k]);
+                        }
+                    }
+
+                    path.push(cur);
+
+                    stack.extend(
+                        graph[cur]
+                            .iter()
+                            .filter(|&&next| Some(next) != par)
+                            .flat_map(|&nxt| {
+                                [
+                                    DFSNode::Backward,
+                                    DFSNode::Forward {
+                                        par: Some(cur),
+                                        cur: nxt,
+                                    },
+                                ]
+                            }),
+                    );
+                }
+                DFSNode::Backward => {
+                    path.pop();
+                }
             }
-
-            parent[next] = Some(curr);
-            dist[next] = dist[curr] + 1;
-            que.push_back(next);
         }
     }
 
-    let mut lca = vec![parent];
-    for i in (0..).take_while(|&i| (n >> i) != 0) {
-        for j in 0..n {
-            lca[i + 1][j] = if let Some(p) = lca[i][j] {
-                lca[i][p]
-            } else {
-                None
-            }
+    for &other_node in &other_nodes {
+        match other_node {
+            Some(other_node) => println!("{}", other_node + 1),
+            None => println!("-1"),
         }
     }
+}
 
-    for &(u, k) in uk.iter() {
-        
+fn find_farthest_point(graph: &[Vec<usize>], start: usize) -> (usize, usize) {
+    let n = graph.len();
+
+    let mut dists = vec![None; n];
+    let mut stack = vec![(start, 0)];
+
+    while let Some((cur, dist)) = stack.pop() {
+        if dists[cur].is_some() {
+            continue;
+        }
+
+        dists[cur] = Some(dist);
+
+        stack.extend(graph[cur].iter().map(|&next| (next, dist + 1)));
     }
+
+    let farthest_node = dists.iter().position_max().unwrap();
+    let farthest_dist = dists[farthest_node].unwrap();
+
+    (farthest_node, farthest_dist)
 }
