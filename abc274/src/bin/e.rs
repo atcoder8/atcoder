@@ -14,7 +14,7 @@ fn main() {
     }
 
     for (i, &(p, q)) in pq.iter().enumerate() {
-        dp[1_usize << (i + n)][(i + n)][1] = ((p.pow(2) + q.pow(2)) as f64).sqrt();
+        dp[1_usize << (i + n)][i + n][1] = ((p.pow(2) + q.pow(2)) as f64).sqrt();
     }
 
     for bit in 0..(1_usize << (n + m)) {
