@@ -1,5 +1,3 @@
-// unfinished
-
 use itertools::Itertools;
 use modint2::Modint998244353;
 use proconio::input;
@@ -12,10 +10,6 @@ fn main() {
     }
 
     println!("{}", (0..t).map(|_| solve()).join("\n"));
-}
-
-fn calc_sum(n: Mint) -> Mint {
-    n * (n + 1) / 2
 }
 
 fn solve() -> Mint {
@@ -31,12 +25,20 @@ fn solve() -> Mint {
         return Mint::new(0);
     }
 
-    if a1 == a2 && a2 == a3 {
-        let raised = Mint::new(10).pow(a1 - 1);
-        return raised * 8 * (raised * 10 - 1) - (calc_sum(raised * 9 - 1) - calc_sum(raised - 1));
-    }
+    let raised1 = Mint::new(10).pow(a1 - 1);
+    let raised2 = Mint::new(10).pow(a2 - 1);
 
-    todo!()
+    let comb_num = if a1 == a2 {
+        (raised1 * 8) * (raised1 * 8 + 1) / 2
+    } else {
+        (raised1 * 9) * (raised2 * 18 - raised1 * 11 + 1) / 2
+    };
+
+    if a2 == a3 {
+        comb_num
+    } else {
+        Mint::new(10).pow(a1 + a2 - 2) * 81 - comb_num
+    }
 }
 
 pub mod modint2 {
