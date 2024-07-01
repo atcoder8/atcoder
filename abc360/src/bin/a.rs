@@ -1,12 +1,11 @@
 use proconio::input;
+use regex::Regex;
 
 fn main() {
     input! {
         s: String,
     }
 
-    let pos_r = s.chars().position(|c| c == 'R');
-    let pos_m = s.chars().position(|c| c == 'M');
-
-    println!("{}", if pos_r < pos_m { "Yes" } else { "No" });
+    let re = Regex::new(r"R.?M").unwrap();
+    println!("{}", if re.is_match(&s) { "Yes" } else { "No" });
 }
