@@ -5,14 +5,6 @@ fn main() {
         y: usize,
     }
 
-    let ans = if y % 400 == 0 {
-        366
-    } else if y % 100 == 0 {
-        365
-    } else if y % 4 == 0 {
-        366
-    } else {
-        365
-    };
-    println!("{}", ans);
+    let days = 365 + (y % 400 == 0 || y % 100 != 0 && y % 4 == 0) as usize;
+    println!("{}", days);
 }
