@@ -6,6 +6,5 @@ fn main() {
     }
 
     let (p, q, r) = (a < b, b < c, c < a);
-    let ans = p & q || q & r || r & p;
-    println!("{}", if ans { "Yes" } else { "No" });
+    println!("{}", if !(p ^ q ^ r) { "Yes" } else { "No" });
 }
