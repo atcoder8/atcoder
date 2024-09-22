@@ -1,8 +1,7 @@
-use std::cmp::Reverse;
+use std::{cmp::Reverse, ops};
 
-use itertools::Itertools;
 use proconio::{input, marker::Usize1};
-use union_find::UnionFind;
+use union_find::*;
 
 const MAX_K: usize = 10;
 
@@ -11,9 +10,7 @@ fn main() {
         (n, q): (usize, usize),
     }
 
-    let mut uf = UnionFind::new(n);
-
-    let mut top_indexes_vec = (0..n).map(|i| TopIndexes::new(i)).collect_vec();
+    let mut uf = UnionFindWithCMonoid::from((0..n).map(|i| TopIndexes::new(i)));
     for _ in 0..q {
         input! {
             qt: usize,
@@ -24,23 +21,13 @@ fn main() {
                 (u, v): (Usize1, Usize1),
             }
 
-            if uf.same(u, v) {
-                continue;
-            }
-
-            let mut top_indexes_u = std::mem::take(&mut top_indexes_vec[uf.leader(u)]);
-            let mut top_indexes_v = std::mem::take(&mut top_indexes_vec[uf.leader(v)]);
-            top_indexes_u.append(&mut top_indexes_v);
-
             uf.merge(u, v);
-
-            top_indexes_vec[uf.leader(u)] = top_indexes_u;
         } else {
             input! {
                 (v, k): (Usize1, usize),
             }
 
-            match top_indexes_vec[uf.leader(v)].nth(k) {
+            match uf.value(v).nth(k - 1) {
                 Some(idx) => println!("{}", idx + 1),
                 None => println!("-1"),
             }
@@ -63,325 +50,187 @@ impl TopIndexes {
     }
 
     fn nth(&self, k: usize) -> Option<usize> {
-        self.0.get(k - 1).cloned()
+        self.0.get(k).cloned()
+    }
+}
+
+impl ops::AddAssign<Self> for TopIndexes {
+    fn add_assign(&mut self, rhs: Self) {
+        let mut rhs = rhs;
+        self.append(&mut rhs);
     }
 }
 
 pub mod union_find {
-    //! Union-Find processes the following queries on undirected graphs.
-    //! * Merge two connected components.
-    //! * Determine whether two given nodes are in the same connected component.
-    //!
-    //! To seed up processing, merge optimization using the number of nodes
-    //! of the connected components and path compression are performed.
-    //!
-    //! The time complexity of each query is `O(A(n))`.
-    //! where `n` is the number of nodes in the graph and
-    //! `A(n)` is the inverse of the Ackermann function.
+    pub use commutative_monoid::*;
 
-    /// This is the value that will be associated with each nodes of the graph.
-    #[derive(Debug, Clone, Copy)]
-    enum ParentOrSize {
-        /// It is used for non-representative nodes and stores the parent node.
-        Parent(usize),
+    /// 素集合データ構造に共通する操作です。
+    /// 連結成分の併合にランクではなく要素数を用います。
+    /// 代表元の探索の際に経路圧縮を行うことを想定して、このトレイトが定義する全てのメソッドは呼び出し元オブジェクトへの可変参照をとります。
+    pub trait UnionBySizeMut {
+        /// 頂点`u`が所属する連結成分の代表元を返します。
+        fn root(&mut self, u: usize) -> usize;
 
-        /// It is used for the representative node and
-        /// stores the number of nodes of the connected component.
-        Size(usize),
+        /// 2つの頂点`u, v`について、それぞれが所属する連結成分を併合します。
+        ///
+        /// 異なる連結成分が新しく併合された場合のみ、`true`を返します。
+        fn merge(&mut self, u: usize, v: usize) -> bool;
+
+        /// 頂点`u`が所属している連結成分の要素数を返します。
+        fn size(&mut self, u: usize) -> usize;
+
+        /// 2つの頂点`u, v`が同じ連結成分に所属しているかどうかを判定します。
+        fn same(&mut self, u: usize, v: usize) -> bool {
+            self.root(u) == self.root(v)
+        }
     }
 
-    /// Union-Find processes the following queries on undirected graphs.
-    /// * Merge two connected components.
-    /// * Determine whether two given nodes are in the same connected component.
-    ///
-    /// To seed up processing, merge optimization using the number of nodes
-    /// of the connected components and path compression are performed.
-    ///
-    /// The time complexity of each query is `O(A(n))`.
-    /// where `n` is the number of nodes in the graph and
-    /// `A(n)` is the inverse of the Ackermann function.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use atcoder8_library::union_find::UnionFind;
-    ///
-    /// let mut uf = UnionFind::new(3);
-    /// assert_eq!(uf.same(0, 2), false);
-    /// uf.merge(0, 1);
-    /// assert_eq!(uf.same(0, 2), false);
-    /// uf.merge(1, 2);
-    /// assert_eq!(uf.same(0, 2), true);
-    /// ```
-    #[derive(Debug, Default, Clone)]
-    pub struct UnionFind {
-        /// For each node, one of the following is stored.
-        /// * The number of nodes of the connected component to which it belongs.
-        /// (If it is a representative node of the connected component.)
-        /// * Index of the parent node. (Otherwise.)
-        parent_or_size: Vec<ParentOrSize>,
+    pub mod commutative_monoid {
+        use std::{
+            mem,
+            ops::{self, AddAssign},
+        };
 
-        /// Number of connected components.
-        group_num: usize,
-    }
+        use super::UnionBySizeMut;
 
-    impl UnionFind {
-        /// Create an undirected graph with `n` nodes and `0` edges.
-        ///
-        /// # Examples
-        ///
-        /// ```
-        /// use atcoder8_library::union_find::UnionFind;
-        ///
-        /// let mut uf = UnionFind::new(3);
-        /// assert_eq!(uf.same(0, 2), false);
-        /// uf.merge(0, 1);
-        /// assert_eq!(uf.same(0, 2), false);
-        /// uf.merge(2, 1);
-        /// assert_eq!(uf.same(0, 2), true);
-        /// ```
-        pub fn new(n: usize) -> Self {
-            UnionFind {
-                parent_or_size: vec![ParentOrSize::Size(1); n],
-                group_num: n,
+        /// 連結成分の代表元が保持する要約です。
+        #[derive(Debug, Clone)]
+        struct Summary<CMonoid>
+        where
+            CMonoid: Clone + ops::AddAssign<CMonoid>,
+        {
+            /// 連結成分の要素数
+            size: usize,
+
+            /// 連結成分に対応付けられた可換モノイドの元
+            value: CMonoid,
+        }
+
+        /// 連結成分の併合と可換モノイドの演算を対応付けたUnionFindです。
+        /// 連結成分ごとに可換モノイドの元を保持し、2つの連結成分が併合される際に新たな連結成分と演算結果が対応付けられます。
+        #[derive(Debug, Clone)]
+        pub struct UnionFindWithCMonoid<CMonoid>
+        where
+            CMonoid: Clone + ops::AddAssign<CMonoid>,
+        {
+            /// parents\[i\]: 頂点iの親 (代表元の場合は自分自身)
+            parents: Vec<usize>,
+
+            /// 代表元に対し、連結成分の大きさと可換モノイドの元が保持されます。
+            table: Vec<Option<Summary<CMonoid>>>,
+
+            /// 連結成分の個数
+            num_groups: usize,
+        }
+
+        impl<CMonoid> UnionBySizeMut for UnionFindWithCMonoid<CMonoid>
+        where
+            CMonoid: Clone + ops::AddAssign<CMonoid>,
+        {
+            fn root(&mut self, u: usize) -> usize {
+                let mut path = vec![];
+                let mut current = u;
+                while self.parents[current] != current {
+                    path.push(current);
+                    current = self.parents[current];
+                }
+
+                path.iter().for_each(|&node| self.parents[node] = current);
+
+                current
+            }
+
+            fn merge(&mut self, u: usize, v: usize) -> bool {
+                let mut root_u = self.root(u);
+                let mut root_v = self.root(v);
+
+                if root_u == root_v {
+                    return false;
+                }
+
+                if self.size(root_u) < self.size(root_v) {
+                    mem::swap(&mut root_u, &mut root_v);
+                }
+
+                let summary_v = mem::take(&mut self.table[root_v]).unwrap();
+                let summary_u = self.table[root_u].as_mut().unwrap();
+
+                self.parents[root_v] = root_u;
+
+                summary_u.size += summary_v.size;
+                summary_u.value += summary_v.value;
+
+                self.num_groups -= 1;
+
+                true
+            }
+
+            fn size(&mut self, u: usize) -> usize {
+                let root = self.root(u);
+                self.table[root].as_ref().unwrap().size
             }
         }
 
-        /// Return the representative node of the connected component containing node `a`.
-        ///
-        /// At that time, perform path compression on the nodes on the path from node `a` to the representative node.
-        ///
-        /// # Examples
-        ///
-        /// ```
-        /// use atcoder8_library::union_find::UnionFind;
-        ///
-        /// let mut uf = UnionFind::new(3);
-        /// uf.merge(1, 2);
-        /// assert_eq!(uf.leader(0), 0);
-        /// assert_eq!(uf.leader(1), uf.leader(2));
-        /// ```
-        pub fn leader(&mut self, a: usize) -> usize {
-            // If node `a` is a representative node of the connected component, return `a`.
-            if let ParentOrSize::Size(_) = self.parent_or_size[a] {
-                return a;
-            }
+        impl<CMonoid, I> From<I> for UnionFindWithCMonoid<CMonoid>
+        where
+            CMonoid: Clone + ops::AddAssign<CMonoid>,
+            I: IntoIterator<Item = CMonoid>,
+        {
+            /// モノイドの元のイテレータまたはイテラブルなコレクションからUnionFindオブジェクトを生成します。
+            fn from(iterable: I) -> Self {
+                let table = iterable
+                    .into_iter()
+                    .map(|value| Some(Summary { size: 1, value }))
+                    .collect::<Vec<_>>();
+                let num_elements = table.len();
 
-            // Path from node `a` to the representative node.
-            let mut path = vec![];
-
-            // Current node.
-            let mut current = a;
-
-            // Record the path to the representative node.
-            while let ParentOrSize::Parent(parent) = self.parent_or_size[current] {
-                // Add current node to the path.
-                path.push(current);
-
-                // Move to the parent node.
-                current = parent;
-            }
-
-            // The representative node of the connected component.
-            let leader = current;
-
-            // Set nodes on the path as direct children of the representative node.
-            path.iter().for_each(|&node| {
-                self.parent_or_size[node] = ParentOrSize::Parent(leader);
-            });
-
-            // Return the representative node of the connected component.
-            leader
-        }
-
-        /// Return whether two nodes `a` and `b` are in the same connected component.
-        ///
-        /// # Examples
-        ///
-        /// ```
-        /// use atcoder8_library::union_find::UnionFind;
-        ///
-        /// let mut uf = UnionFind::new(3);
-        /// assert_eq!(uf.same(0, 2), false);
-        /// uf.merge(0, 1);
-        /// assert_eq!(uf.same(0, 2), false);
-        /// uf.merge(2, 1);
-        /// assert_eq!(uf.same(0, 2), true);
-        /// ```
-        pub fn same(&mut self, a: usize, b: usize) -> bool {
-            self.leader(a) == self.leader(b)
-        }
-
-        /// Merge each connected component containing nodes `a` and `b`.
-        ///
-        /// Return `true` if different connected components are newly merged.
-        ///
-        /// # Examples
-        ///
-        /// ```
-        /// use atcoder8_library::union_find::UnionFind;
-        ///
-        /// let mut uf = UnionFind::new(3);
-        /// assert_eq!(uf.same(0, 2), false);
-        /// uf.merge(0, 1);
-        /// assert_eq!(uf.same(0, 2), false);
-        /// uf.merge(2, 1);
-        /// assert_eq!(uf.same(0, 2), true);
-        /// ```
-        pub fn merge(&mut self, a: usize, b: usize) -> bool {
-            // Representative node of the connected component that contains the node `a`.
-            let leader_a = self.leader(a);
-            // Representative node of the connected component that contains the node `b`.
-            let leader_b = self.leader(b);
-
-            // If nodes `a` and `b` are in the same connected component, return `false` without processing.
-            if leader_a == leader_b {
-                return false;
-            }
-
-            // Number of nodes of the component containing node `a`.
-            let component_size_a = self.size(leader_a);
-
-            // Number of nodes of the component containing node `b`.
-            let component_size_b = self.size(leader_b);
-
-            // Number of nodes of the merged component.
-            let merged_component_size = component_size_a + component_size_b;
-
-            // Set the parent of the representative node of the smaller sized connected component
-            // to be the parent of the other connected component.
-            if component_size_a <= component_size_b {
-                self.parent_or_size[leader_a] = ParentOrSize::Parent(leader_b);
-                self.parent_or_size[leader_b] = ParentOrSize::Size(merged_component_size);
-            } else {
-                self.parent_or_size[leader_b] = ParentOrSize::Parent(leader_a);
-                self.parent_or_size[leader_a] = ParentOrSize::Size(merged_component_size);
-            }
-
-            // Decrease the number of connected components by one.
-            self.group_num -= 1;
-
-            // Return `true` because different connected components are newly combined.
-            true
-        }
-
-        /// Return a list of connected components.
-        ///
-        /// Each connected component consists of indexes of nodes.
-        /// The indexes of the nodes in each connected component are arranged in ascending order.
-        /// The list of connected components is sorted in ascending order
-        /// with respect to the smallest index of the included nodes.
-        ///
-        /// # Examples
-        ///
-        /// ```
-        /// use atcoder8_library::union_find::UnionFind;
-        ///
-        /// let mut uf = UnionFind::new(5);
-        /// uf.merge(1, 2);
-        /// uf.merge(2, 3);
-        /// assert_eq!(uf.groups(), vec![vec![0], vec![1, 2, 3], vec![4]]);
-        /// ```
-        pub fn groups(&mut self) -> Vec<Vec<usize>> {
-            // Number of nodes in graph.
-            let element_num = self.parent_or_size.len();
-
-            // List of connected components.
-            let mut groups: Vec<Vec<usize>> = vec![];
-            // Correspondence between the representative node and group index.
-            let mut leader_to_idx: Vec<Option<usize>> = vec![None; element_num];
-
-            // Assign each node in the graph to a group.
-            for node in 0..element_num {
-                // Representative node of the connected component to which the `node` belongs.
-                let leader = self.leader(node);
-
-                if let Some(group_idx) = leader_to_idx[leader] {
-                    // Assign to an existing group.
-                    groups[group_idx].push(node);
-                } else {
-                    // Adding a new group.
-                    leader_to_idx[leader] = Some(groups.len());
-                    groups.push(vec![node]);
+                Self {
+                    parents: (0..num_elements).collect(),
+                    table,
+                    num_groups: num_elements,
                 }
             }
-
-            // Return a list of groups.
-            groups
         }
 
-        /// Return the number of nodes in the connected component to which node `a` belongs.
-        ///
-        /// # Examples
-        ///
-        /// ```
-        /// use atcoder8_library::union_find::UnionFind;
-        ///
-        /// let mut uf = UnionFind::new(3);
-        /// assert_eq!(uf.size(0), 1);
-        /// uf.merge(0, 1);
-        /// assert_eq!(uf.size(0), 2);
-        /// uf.merge(2, 1);
-        /// assert_eq!(uf.size(0), 3);
-        /// ```
-        pub fn size(&mut self, a: usize) -> usize {
-            let leader = self.leader(a);
-
-            match self.parent_or_size[leader] {
-                ParentOrSize::Parent(_) => panic!(),
-                ParentOrSize::Size(size) => size,
+        impl<CMonoid> UnionFindWithCMonoid<CMonoid>
+        where
+            CMonoid: Clone + AddAssign<CMonoid>,
+        {
+            /// グラフ全体の頂点の個数を返します。
+            pub fn num_elements(&self) -> usize {
+                self.parents.len()
             }
-        }
 
-        /// Add a new node with degree `0`.
-        ///
-        /// # Examples
-        ///
-        /// ```
-        /// use atcoder8_library::union_find::UnionFind;
-        ///
-        /// let mut uf = UnionFind::new(4);
-        /// uf.merge(1, 2);
-        /// uf.merge(2, 3);
-        /// assert_eq!(uf.groups(), vec![vec![0], vec![1, 2, 3]]);
-        /// uf.add();
-        /// assert_eq!(uf.groups(), vec![vec![0], vec![1, 2, 3], vec![4]]);
-        /// ```
-        pub fn add(&mut self) {
-            self.parent_or_size.push(ParentOrSize::Size(1));
-            self.group_num += 1;
-        }
+            /// 連結成分の個数を返します。
+            pub fn num_groups(&self) -> usize {
+                self.num_groups
+            }
 
-        /// Return the number of connected components.
-        ///
-        /// # Examples
-        ///
-        /// ```
-        /// use atcoder8_library::union_find::UnionFind;
-        ///
-        /// let mut uf = UnionFind::new(3);
-        /// assert_eq!(uf.group_num(), 3);
-        /// uf.merge(0, 1);
-        /// assert_eq!(uf.group_num(), 2);
-        /// uf.merge(2, 1);
-        /// assert_eq!(uf.group_num(), 1);
-        /// ```
-        pub fn group_num(&self) -> usize {
-            self.group_num
-        }
+            /// 指定された頂点が所属する連結成分に紐付けられた可換モノイドの元を返します。
+            pub fn value(&mut self, u: usize) -> &CMonoid {
+                let root = self.root(u);
+                &self.table[root].as_ref().unwrap().value
+            }
 
-        /// Return the number of nodes in the graph.
-        ///
-        /// # Examples
-        ///
-        /// ```
-        /// use atcoder8_library::union_find::UnionFind;
-        ///
-        /// let mut uf = UnionFind::new(5);
-        /// assert_eq!(uf.elem_num(), 5);
-        /// ```
-        pub fn elem_num(&self) -> usize {
-            self.parent_or_size.len()
+            /// グラフ全体の頂点を連結成分ごとに分割します。
+            /// 各連結成分の頂点のインデックスは昇順に並んでおり、連結成分はリストの先頭のインデックスについて昇順に並んでいます。
+            pub fn groups(&mut self) -> Vec<Vec<usize>> {
+                let element_num = self.table.len();
+
+                let mut groups: Vec<Vec<usize>> = vec![];
+                let mut leader_to_group: Vec<Option<usize>> = vec![None; self.table.len()];
+                for u in 0..element_num {
+                    let root_u = self.root(u);
+                    if let Some(group_idx) = leader_to_group[root_u] {
+                        groups[group_idx].push(u);
+                    } else {
+                        leader_to_group[root_u] = Some(groups.len());
+                        groups.push(vec![u]);
+                    }
+                }
+
+                groups
+            }
         }
     }
 }
