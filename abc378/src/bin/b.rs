@@ -12,9 +12,7 @@ fn main() {
     let solve = |t: usize, d: usize| {
         let (q, r) = qr[t];
         let mut date = d / q * q + r;
-        if date >= d + q {
-            date -= q;
-        } else if date < d {
+        if date < d {
             date += q;
         }
 

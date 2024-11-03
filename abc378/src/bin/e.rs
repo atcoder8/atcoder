@@ -1,4 +1,5 @@
 use fenwick_tree::FenwickTree;
+use itertools::enumerate;
 use proconio::input;
 
 fn main() {
@@ -8,21 +9,16 @@ fn main() {
     }
 
     let mut ans = 0_usize;
-    let mut count_ft = FenwickTree::<usize>::new(m);
-    count_ft.add(0, 1);
-    let mut sum_ft = FenwickTree::<usize>::new(m);
+    let mut sum_rems = 0_usize;
+    let mut ft = FenwickTree::<usize>::new(m);
+    ft.add(0, 1);
     let mut rem = 0_usize;
-    for &a in &aa {
+    for (i, &a) in enumerate(&aa) {
         rem = (rem + a) % m;
-
-        let add1 = rem * count_ft.sum(..rem) - sum_ft.sum(..rem);
-        let add2 = (rem + m) * count_ft.sum(rem + 1..) - sum_ft.sum(rem + 1..);
-        ans += add1 + add2;
-
-        count_ft.add(rem, 1);
-        sum_ft.add(rem, rem);
+        ans += rem * (i + 1) + m * ft.sum(rem + 1..) - sum_rems;
+        sum_rems += rem;
+        ft.add(rem, 1);
     }
-
     println!("{}", ans);
 }
 
