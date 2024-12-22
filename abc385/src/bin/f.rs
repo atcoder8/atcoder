@@ -1,5 +1,3 @@
-// unfinished
-
 use itertools::Itertools;
 use proconio::input;
 
@@ -24,22 +22,19 @@ fn solve() -> Option<f64> {
         return None;
     }
 
-    let mut ok = 2e18;
-    let mut ng = 0.0_f64;
-    while (ok - ng).abs() > 1e-10 {
-        let mid = (ok + ng) / 2.0;
+    let calc_required_height = |coord1: (usize, usize), coord2: (usize, usize)| {
+        let (x1, y1) = coord1;
+        let (x2, y2) = coord2;
+        let numer = (x2 * y1).saturating_sub(x1 * y2);
+        let denom = x2 - x1;
+        numer as f64 / denom as f64
+    };
 
-        if xh
-            .iter()
-            .map(|&(x, h)| (x as f64, h as f64))
-            .tuple_windows()
-            .all(|((x1, y1), (x2, y2))| (y1 - mid) * x2 < x1 * (y2 - mid))
-        {
-            ok = mid;
-        } else {
-            ng = mid;
-        }
-    }
-
-    Some(ng)
+    let max_required_height = xh
+        .iter()
+        .tuple_windows()
+        .map(|(&coord1, &coord2)| calc_required_height(coord1, coord2))
+        .max_by(|x, y| x.partial_cmp(y).unwrap())
+        .unwrap();
+    Some(max_required_height)
 }
