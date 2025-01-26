@@ -1,20 +1,17 @@
 use itertools::Itertools;
-use num::Integer;
+use num::Rational32;
 use proconio::input;
 
 fn main() {
     input! {
         n: usize,
-        aa: [usize; n],
+        aa: [i32; n],
     }
 
-    let gcd = aa[0].gcd(&aa[1]);
-    let denom = aa[0] / gcd;
-    let numer = aa[1] / gcd;
-
-    let ans = aa.iter().tuple_windows().all(|(&a1, &a2)| {
-        let middle = a1 * numer;
-        middle % denom == 0 && middle / denom == a2
-    });
+    let ans = aa
+        .iter()
+        .tuple_windows()
+        .map(|(&a1, &a2)| Rational32::new(a2, a1))
+        .all_equal();
     println!("{}", if ans { "Yes" } else { "No" });
 }
