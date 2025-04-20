@@ -1,66 +1,104 @@
-// unfinished
-
-use itertools::enumerate;
-use ndarray::Array2;
+use itertools::{enumerate, Itertools};
+use ndarray::prelude::*;
 use proconio::input;
 
 fn main() {
     input! {
         (n, x): (usize, usize),
-        scp: [(f64, usize, f64); n],
     }
 
-    // dp[(i,j)]: 残金iで解いた問題の集合がjの場合の最大の期待値
-    let mut dp = Array2::from_elem((x + 1, 1_usize << n), None);
-    dp[(x, 0)] = Some(0.0);
-    for rem in (0..=x).rev() {
-        for bits in 0..1_usize << n {
-            let Some(max_exp) = dp[(rem, bits)] else {
-                continue;
-            };
+    let problems = (0..n).map(|_| Problem::read()).collect_vec();
 
-            for (i, &(score, cost, p)) in enumerate(&scp) {
-                let probably = p / 100.0;
-
-                if bits >> i & 1 == 1 || cost > rem {
-                    continue;
-                }
-
-                chmax_for_option(
-                    &mut dp[(rem - cost, bits | (1 << i))],
-                    (max_exp + score) * probably,
-                );
-
-                chmax_for_option(&mut dp[(rem - cost, bits)], max_exp);
-            }
-        }
-    }
-
-    let ans = dp
-        .iter()
-        .filter_map(|&max_exp| max_exp)
-        .max_by(|x, y| x.partial_cmp(y).unwrap())
-        .unwrap();
+    let ans = recursion(
+        &problems,
+        x,
+        0,
+        &mut Array2::from_elem((x + 1, 1 << n), None),
+    );
     println!("{}", ans);
 }
 
-/// If `value` is `None` or contains a value less than `cand_value`, update it to `Some(cand_value)`.
-///
-/// Returns whether `value` has been updated or not as a bool value.
-///
-/// # Arguments
-///
-/// * `value` - Reference variable to be updated.
-/// * `cand_value` - Candidate value for update.
-pub fn chmax_for_option<T>(value: &mut Option<T>, cand_value: T) -> bool
-where
-    T: PartialOrd,
-{
-    if value.as_ref().is_some_and(|cost| cost >= &cand_value) {
-        return false;
+#[derive(Debug, Clone, Copy)]
+struct Problem {
+    score: usize,
+    cost: usize,
+    probability: f64,
+}
+
+impl Problem {
+    fn read() -> Self {
+        input! {
+            (s, c, p): (usize, usize, f64),
+        }
+
+        Self {
+            score: s,
+            cost: c,
+            probability: p / 100.0,
+        }
+    }
+}
+
+fn recursion(
+    problems: &[Problem],
+    rem_money: usize,
+    bits: usize,
+    memo: &mut Array2<Option<f64>>,
+) -> f64 {
+    if let Some(exp) = memo[(rem_money, bits)] {
+        return exp;
     }
 
-    *value = Some(cand_value);
+    let max_exp = enumerate(problems)
+        .filter_map(|(i, problem)| {
+            if bits >> i & 1 == 1 || problem.cost > rem_money {
+                return None;
+            }
 
-    true
+            let exp = (recursion(problems, rem_money - problem.cost, bits | 1 << i, memo)
+                + problem.score as f64)
+                * problem.probability
+                + recursion(problems, rem_money - problem.cost, bits, memo)
+                    * (1.0 - problem.probability);
+            Some(exp)
+        })
+        .max_by(|x, y| x.partial_cmp(y).unwrap())
+        .unwrap_or(0.0);
+
+    memo[(rem_money, bits)] = Some(max_exp);
+
+    max_exp
+}
+
+/// If the right-hand side is greater than the left-hand side,
+/// clones the right-hand side, bind it to the left-hand side,
+/// and return `true`.
+/// If the right-hand side is less than or equal to the left-hand side,
+/// does nothing and returns `false`.
+///
+/// The left-hand and right-hand sides must be the same type
+/// and must implement the `Clone` trait.
+///
+/// # Examples
+///
+/// ```
+/// let mut x = 5;
+///
+/// assert_eq!(chmax!(x, 3), false);
+/// assert_eq!(x, 5);
+///
+/// assert_eq!(chmax!(x, 7), true);
+/// assert_eq!(x, 7);
+/// ```
+#[macro_export]
+macro_rules! chmax {
+    ($lhs: expr, $rhs: expr) => {
+        if $rhs > $lhs {
+            let temp = $rhs.clone();
+            $lhs = temp;
+            true
+        } else {
+            false
+        }
+    };
 }
