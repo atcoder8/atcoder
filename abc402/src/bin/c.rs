@@ -8,23 +8,23 @@ fn main() {
         bb: [Usize1; n],
     }
 
-    let mut ingredient_to_dishes = vec![vec![]; n];
-    for (dish, ingredients) in enumerate(&aaa) {
-        for &ingredient in ingredients {
-            ingredient_to_dishes[ingredient].push(dish);
-        }
+    let mut labels = vec![0; n];
+    for (i, &b) in enumerate(&bb) {
+        labels[b] = i;
     }
 
-    let mut cnt = 0_usize;
-    let mut rem_by_dish = aaa.iter().map(|aa| aa.len()).collect_vec();
-    for &b in &bb {
-        for &dish in &ingredient_to_dishes[b] {
-            rem_by_dish[dish] -= 1;
-            if rem_by_dish[dish] == 0 {
-                cnt += 1;
-            }
-        }
-
-        println!("{}", cnt);
+    let mut counts = vec![0_usize; n];
+    for aa in &aaa {
+        let overcoming_day = aa.iter().map(|&a| labels[a]).max().unwrap();
+        counts[overcoming_day] += 1;
     }
+
+    let ans = counts
+        .iter()
+        .scan(0_usize, |acc, cnt| {
+            *acc += cnt;
+            Some(*acc)
+        })
+        .join("\n");
+    println!("{}", ans);
 }
