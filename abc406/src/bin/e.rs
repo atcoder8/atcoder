@@ -1,8 +1,10 @@
 use itertools::Itertools;
-use modint2::Modint998244353;
+use modint2::{Factorial, Modint998244353};
 use proconio::input;
 
 type Mint = Modint998244353;
+
+const MAX_NUM_DIGITS: u32 = 60;
 
 fn main() {
     input! {
@@ -14,38 +16,36 @@ fn main() {
 
 fn solve() -> Mint {
     input! {
-        (n, k): (usize, usize),
+        (n, k): (usize, u32),
     }
 
-    let mut less = [Node {
-        count: 0,
-        sum: Mint::new(0),
-    }; 61];
-    for digit in (0_usize..60).rev() {
-        let equal = n >> digit << digit;
+    let factorial = Factorial::<Mint>::new(MAX_NUM_DIGITS as usize);
 
-        // less -> less
-        for i in (0..60).rev() {
-            less[i + 1].count += less[i].count;
-            less[i + 1].sum += less[i].sum + Mint::new(1_usize << digit) * less[i].count;
+    let mut ans = Mint::new(if n.count_ones() == k { n } else { 0 });
+    for digit in (0..MAX_NUM_DIGITS).rev() {
+        let upper_digits = n >> (digit + 1) << (digit + 1);
+        let upper_ones = upper_digits.count_ones();
+
+        if upper_ones > k {
+            break;
         }
 
-        // equal -> less
+        let lower_ones = k - upper_ones;
+
+        if lower_ones > digit {
+            break;
+        }
+
         if n >> digit & 1 == 1 {
-            let flip_equal = equal ^ (1 << digit);
-            let flip_equal_ones = flip_equal.count_ones() as usize;
-            less[flip_equal_ones].count += 1;
-            less[flip_equal_ones].sum += equal ^ (1 << digit);
+            ans += upper_digits * factorial.combinations(digit as usize, lower_ones as usize);
+            if lower_ones >= 1 {
+                ans += factorial.combinations(digit as usize - 1, lower_ones as usize - 1)
+                    * (2_usize.pow(digit) - 1);
+            }
         }
     }
 
-    less[k].sum + n * (n.count_ones() as usize == k) as usize
-}
-
-#[derive(Debug, Clone, Copy)]
-struct Node {
-    count: usize,
-    sum: Mint,
+    ans
 }
 
 pub mod modint2 {
