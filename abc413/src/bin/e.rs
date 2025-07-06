@@ -15,15 +15,11 @@ fn solve() -> Vec<usize> {
         mut pp: [usize; 2_usize.pow(n)],
     }
 
-    let raised = 2_usize.pow(n);
-
     for exp in (1..=n).rev() {
-        let step = 2_usize.pow(exp);
-        for left in (0..raised).step_by(step) {
-            let left_min = pp[left..left + step / 2].iter().min().unwrap();
-            let right_min = pp[left + step / 2..left + step].iter().min().unwrap();
-            if left_min > right_min {
-                pp[left..left + step].reverse();
+        for left in (0..2_usize.pow(n)).step_by(2_usize.pow(exp)) {
+            let section = &mut pp[left..left + 2_usize.pow(exp)];
+            if section.iter().position_min().unwrap() >= section.len() / 2 {
+                section.reverse();
             }
         }
     }
