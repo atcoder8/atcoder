@@ -12,12 +12,12 @@ fn main() {
 fn solve() -> Vec<usize> {
     input! {
         n: u32,
-        mut pp: [usize; 2_usize.pow(n)],
+        mut pp: [usize; 1 << n],
     }
 
     for exp in (1..=n).rev() {
-        for left in (0..2_usize.pow(n)).step_by(2_usize.pow(exp)) {
-            let section = &mut pp[left..left + 2_usize.pow(exp)];
+        for left in (0..1 << n).step_by(1 << exp) {
+            let section = &mut pp[left..left + (1 << exp)];
             if section.iter().position_min().unwrap() >= section.len() / 2 {
                 section.reverse();
             }
