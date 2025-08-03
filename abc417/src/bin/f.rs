@@ -1,5 +1,3 @@
-// unfinished
-
 use itertools::Itertools;
 use proconio::{input, marker::Usize1};
 
@@ -17,25 +15,41 @@ fn main() {
         lr: [(Usize1, usize); m],
     }
 
-    let mut lst = LazySegtree::<S, F>::from(aa.iter().map(|&a| S(Mint::new(a))).collect_vec());
+    let mut lst = LazySegtree::<S, F>::from(aa.iter().map(|&a| S::new(a)).collect_vec());
     for &(l, r) in &lr {
-        let sum = lst.product_range(l..r);
-        lst.apply_range(l..r, &F(Some(sum.0 / (r - l))));
+        let prod = lst.product_range(l..r);
+        let avg = prod.expected_value / prod.length;
+        lst.apply_range(l..r, &F(Some(avg)));
     }
 
-    println!("{}", (0..n).map(|i| lst.get(i).0).join(" "));
+    println!("{}", (0..n).map(|i| lst.get(i).expected_value).join(" "));
 }
 
-#[derive(Debug, Clone, Copy)]
-struct S(Mint);
+#[derive(Debug, Clone, Copy, Default)]
+struct S {
+    length: usize,
+    expected_value: Mint,
+}
 
 impl Monoid for S {
     fn id() -> Self {
-        Self(Mint::new(0))
+        Self::default()
     }
 
     fn product(&self, rhs: &Self) -> Self {
-        Self(self.0 + rhs.0)
+        Self {
+            length: self.length + rhs.length,
+            expected_value: self.expected_value + rhs.expected_value,
+        }
+    }
+}
+
+impl S {
+    fn new(init_value: usize) -> Self {
+        Self {
+            length: 1,
+            expected_value: Mint::new(init_value),
+        }
     }
 }
 
@@ -48,14 +62,17 @@ impl Monoid for F {
     }
 
     fn product(&self, rhs: &Self) -> Self {
-        Self(self.0.or(rhs.0))
+        Self(rhs.0.or(self.0))
     }
 }
 
 impl Mapping<S> for F {
     fn mapping(&self, s: &S) -> S {
         match self.0 {
-            Some(f) => S(f),
+            Some(f) => S {
+                length: s.length,
+                expected_value: f * s.length,
+            },
             None => *s,
         }
     }
