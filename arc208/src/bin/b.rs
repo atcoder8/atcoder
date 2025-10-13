@@ -1,4 +1,3 @@
-// unfinished
 use itertools::Itertools;
 use proconio::{fastout, input};
 
@@ -22,7 +21,7 @@ fn solve(n: usize, k: usize) -> Vec<usize> {
         let mut aa = vec![last];
         for _ in 0..n - 1 {
             let last = *aa.last().unwrap();
-            let curr = (last.saturating_sub(rem)).max((last + 1) / 2);
+            let curr = (last.saturating_sub(rem)).max(last / 2 + 1);
             aa.push(curr);
             rem -= last % curr;
         }
