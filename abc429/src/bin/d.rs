@@ -1,38 +1,33 @@
-use itertools::Itertools;
 use proconio::input;
 
 fn main() {
     input! {
         (n, m, c): (usize, usize, usize),
-        aa: [usize; n],
+        mut aa: [usize; n],
     }
 
-    let counts = aa
-        .iter()
-        .cloned()
-        .sorted_unstable()
-        .dedup_with_count()
-        .collect_vec();
+    aa.sort_unstable();
 
     let mut sum = 0_usize;
+    let mut num_encounters = 0_usize;
+    let mut left = 0_usize;
     let mut right = 0_usize;
-    let mut num_encounters = counts[0].0;
-    for left in 0..counts.len() {
-        num_encounters -= counts[left].0;
-
+    let mut prev_left_a = aa[n - 1];
+    while left < n {
         while num_encounters < c {
-            right += 1;
-            num_encounters += counts[right % counts.len()].0;
+            let next_right = (right + 1..n).find(|&i| aa[i] != aa[right]).unwrap_or(n);
+            num_encounters += next_right - right;
+            right = next_right % n;
         }
 
-        let position1 = counts[left].1;
-        let position2 = counts[(left + 1) % counts.len()].1;
-        let interval = if position1 < position2 {
-            position2 - position1
-        } else {
-            position2 + m - position1
-        };
-        sum += num_encounters * interval;
+        let interval = aa[left] + m * (aa[left] <= prev_left_a) as usize - prev_left_a;
+        sum += interval * num_encounters;
+
+        prev_left_a = aa[left];
+
+        let next_left = (left + 1..n).find(|&i| aa[i] != aa[left]).unwrap_or(n);
+        num_encounters -= next_left - left;
+        left = next_left;
     }
 
     println!("{sum}");
